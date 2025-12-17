@@ -36,6 +36,14 @@ describe("normalizePath", () => {
   it("normalizes Windows-style separators", () => {
     expect(normalizePath("pages\\ideas\\今日")).toBe("/pages/ideas/今日");
   });
+
+  it("sanitizes control characters within segments", () => {
+    expect(normalizePath("/pages/\u0002draft")).toBe("/pages/draft");
+  });
+
+  it("removes unsafe parent directory traversal", () => {
+    expect(normalizePath("/pages/foo/../..")).toBe("/");
+  });
 });
 
 describe("parseHashPath", () => {
@@ -75,5 +83,13 @@ describe("formatHashFromPath", () => {
 
   it("handles root path", () => {
     expect(formatHashFromPath("/")).toBe("#/");
+  });
+
+  it("normalizes empty input to root hash", () => {
+    expect(formatHashFromPath("")).toBe("#/");
+  });
+
+  it("removes traversal and control characters before formatting", () => {
+    expect(formatHashFromPath("/pages/../\u0001unsafe")).toBe("#/pages/unsafe");
   });
 });
