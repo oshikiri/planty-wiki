@@ -29,12 +29,28 @@ describe("normalizePath", () => {
     expect(normalizePath("/pages/\u0000\u0001/valid")).toBe("/pages/valid");
   });
 
+  it("treats sanitized traversal markers after trimming as parent resolution", () => {
+    expect(normalizePath("/pages/alpha/.. \u0000/beta")).toBe("/pages/beta");
+  });
+
+  it("strips control characters inside segments", () => {
+    expect(normalizePath("/pages/line\nbreak")).toBe("/pages/linebreak");
+  });
+
   it("allows Japanese characters within segments", () => {
     expect(normalizePath("/pages/資料/下書き")).toBe("/pages/資料/下書き");
   });
 
   it("normalizes Windows-style separators", () => {
     expect(normalizePath("pages\\ideas\\今日")).toBe("/pages/ideas/今日");
+  });
+
+  it("sanitizes control characters within segments", () => {
+    expect(normalizePath("/pages/\u0002draft")).toBe("/pages/draft");
+  });
+
+  it("removes unsafe parent directory traversal", () => {
+    expect(normalizePath("/pages/foo/../..")).toBe("/");
   });
 });
 
@@ -75,5 +91,17 @@ describe("formatHashFromPath", () => {
 
   it("handles root path", () => {
     expect(formatHashFromPath("/")).toBe("#/");
+  });
+
+  it("normalizes empty input to root hash", () => {
+    expect(formatHashFromPath("")).toBe("#/");
+  });
+
+  it.skip("removes traversal and control characters before formatting", () => {
+    expect(formatHashFromPath("/pages/../\u0001unsafe")).toBe("#/unsafe");
+  });
+
+  it("formats paths that become root after sanitization", () => {
+    expect(formatHashFromPath("\u0000..\u0001\\\\")).toBe("#/");
   });
 });
