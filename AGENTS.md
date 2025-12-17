@@ -29,6 +29,8 @@
   - `npm run lint`
   - `npm run typecheck`
   - `npm run format`
+  - `npm run build`
+  - `npm test`
 - 差分説明やレビュー対応では、変更意図・必要性・未対応時の影響を明確に説明し、今後の判断材料を共有する
 - 同じ関数の中で処理の抽象度は揃える
   - 例えばReactコンポーネントの中で文字列操作したい場合は関数に切り出す
