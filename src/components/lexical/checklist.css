@@ -1,0 +1,127 @@
+.lexical-editor-content li[role="checkbox"] {
+  /* チェック装飾一式をまとめるためのカスタムプロパティ */
+  --checkbox-size: 0.7rem;
+  --checkbox-padding: 0.25rem;
+  --checkbox-left: 0.25rem;
+  --checkbox-top: 0.08rem;
+  --checkbox-gap: calc(var(--checkbox-size) + var(--checkbox-padding) * 2 + 0.35rem);
+  --checkbox-accent: var(--accent-2);
+  --checkbox-mark: "✓";
+
+  list-style: none;
+  position: relative;
+  padding-left: var(--checkbox-gap);
+  cursor: pointer;
+  user-select: none;
+  color: var(--text);
+}
+
+.lexical-editor-content li[role="checkbox"]:focus,
+.lexical-editor-content li[role="checkbox"]:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.lexical-editor-content li[role="checkbox"]::before {
+  content: "";
+  position: absolute;
+  left: var(--checkbox-left);
+  top: var(--checkbox-top);
+  width: calc(var(--checkbox-size) + var(--checkbox-padding) * 2);
+  height: calc(var(--checkbox-size) + var(--checkbox-padding) * 2);
+  border-radius: 0.4rem;
+  border: 0.16rem solid color-mix(in srgb, var(--checkbox-accent) 62%, var(--border) 38%);
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--bg-panel) 92%, #ffffff 8%),
+    color-mix(in srgb, var(--bg-panel) 70%, #000000 30%)
+  );
+  background-color: color-mix(in srgb, var(--bg-panel) 80%, #ffffff 20%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--checkbox-size);
+  color: color-mix(in srgb, var(--checkbox-accent) 80%, var(--text) 20%);
+  text-shadow: 0 0 8px color-mix(in srgb, var(--checkbox-accent) 40%, transparent);
+  transform: scale(1);
+  transition: all 260ms ease-out;
+  box-shadow: 0 0 16px color-mix(in srgb, var(--checkbox-accent) 35%, transparent);
+  box-sizing: border-box;
+}
+
+.lexical-editor-content li[role="checkbox"][aria-checked="true"]::before {
+  content: var(--checkbox-mark);
+  border-color: var(--border);
+  color: var(--text-subtle);
+  text-shadow: none;
+  background-color: color-mix(in srgb, var(--bg-panel) 92%, #000000 8%);
+  box-shadow: inset 0 0 8px color-mix(in srgb, #000000 65%, transparent);
+  animation: lexical-checkbox-border-pop 420ms cubic-bezier(0.2, 1.35, 0.32, 1.1);
+}
+
+.lexical-editor-content li[role="checkbox"][aria-checked="true"]::after {
+  content: "";
+  position: absolute;
+  left: var(--checkbox-left);
+  top: var(--checkbox-top);
+  width: calc(var(--checkbox-size) + var(--checkbox-padding) * 2);
+  height: calc(var(--checkbox-size) + var(--checkbox-padding) * 2);
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--checkbox-accent) 40%, transparent),
+    transparent 70%
+  );
+  animation: lexical-checkbox-glow-burst 220ms ease-out forwards;
+  opacity: 0.8;
+}
+
+.lexical-editor-content li[role="checkbox"][aria-checked="true"] {
+  text-decoration: line-through;
+  text-decoration-thickness: 0.1em;
+  color: var(--text-subtle);
+}
+
+.lexical-editor-content li[role="checkbox"]:active::before {
+  transform: scale(0.9);
+  border-color: color-mix(in srgb, var(--checkbox-accent) 60%, var(--border) 40%);
+  box-shadow:
+    0 0 12px color-mix(in srgb, var(--checkbox-accent) 32%, transparent),
+    inset 0 0 12px color-mix(in srgb, var(--text) 15%, transparent);
+}
+
+@keyframes lexical-checkbox-border-pop {
+  0% {
+    transform: scaleY(0.5) scaleX(0.8);
+    box-shadow: inset 0 0 6px color-mix(in srgb, #000000 45%, transparent);
+    border-color: color-mix(in srgb, var(--checkbox-accent) 100%, #ffffff 10%);
+  }
+  50% {
+    transform: scale(1.5);
+    box-shadow:
+      0 0 12px color-mix(in srgb, var(--checkbox-accent) 20%, transparent),
+      inset 0 0 12px color-mix(in srgb, #000000 80%, transparent);
+    border-color: color-mix(in srgb, var(--border) 100%, var(--checkbox-accent) 60%);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: inset 0 0 8px color-mix(in srgb, #000000 65%, transparent);
+    border-color: var(--border);
+  }
+}
+
+@keyframes lexical-checkbox-glow-burst {
+  0% {
+    transform: scale(0.5);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.8);
+    opacity: 0.4;
+  }
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}

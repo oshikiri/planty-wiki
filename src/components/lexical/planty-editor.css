@@ -1,0 +1,83 @@
+.lexical-editor-root {
+  position: relative;
+  flex: 1;
+}
+
+.lexical-editor-content {
+  min-height: 200px;
+  padding: var(--space-xs);
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--text);
+  outline: none;
+}
+
+.lexical-editor-content > :is(ul, ol) {
+  margin-block: 0;
+  padding-block: 0;
+}
+
+.lexical-editor-content ul,
+.lexical-editor-content ol {
+  padding-inline-start: var(--space-md);
+}
+
+.lexical-editor-content li:has(> ul),
+.lexical-editor-content li:has(> ol) {
+  list-style-type: none;
+  padding-left: 0.75rem;
+}
+
+.lexical-editor-content .planty-wikilink {
+  color: var(--accent-2);
+  cursor: pointer;
+}
+
+.lexical-editor-content a {
+  color: var(--accent-2);
+  text-decoration: underline;
+  text-underline-offset: 0.12em;
+}
+
+.lexical-editor-content a:hover {
+  text-decoration-thickness: 0.16em;
+}
+
+.lexical-editor-content li[role="checkbox"][aria-checked="true"] .planty-wikilink {
+  color: color-mix(in srgb, var(--text-subtle) 85%, var(--text) 15%);
+}
+
+.lexical-editor-content code {
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
+    monospace;
+  font-size: 0.95em;
+  padding: 0.08em 0.32em;
+  border-radius: 4px;
+  background: rgba(15, 23, 42, 0.9);
+  border: 2px solid var(--border);
+  color: var(--text);
+}
+
+.lexical-editor-content li[role="checkbox"][aria-checked="true"] code {
+  background: rgba(15, 23, 42, 0.4);
+  color: color-mix(in srgb, var(--text-subtle) 85%, var(--text) 15%);
+  border-color: color-mix(in srgb, var(--border) 80%, transparent);
+}
+
+.lexical-editor-content:focus,
+.lexical-editor-content:focus-visible,
+[contenteditable="true"]:focus,
+[contenteditable="true"]:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.lexical-editor-placeholder {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  pointer-events: none;
+  font-size: 14px;
+  color: var(--text-subtle);
+}

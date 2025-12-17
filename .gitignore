@@ -1,0 +1,8 @@
+# planty-wiki
+dist/
+
+# Node.js
+node_modules/
+
+# Vite
+.vite/

@@ -1,0 +1,124 @@
+.searchSidebar {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: var(--glow);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: sticky;
+  top: var(--space-xl);
+  align-self: start;
+  max-height: calc(100vh - var(--space-xl) * 2);
+  overflow-y: auto;
+}
+
+.header {
+  margin-bottom: 8px;
+}
+
+.title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(15, 23, 42, 0.9);
+  color: var(--text);
+  font-size: 12px;
+}
+
+.searchInput::placeholder {
+  color: var(--text-subtle);
+}
+
+.searchInput:focus-visible {
+  outline: none;
+  border-color: var(--accent-2);
+  box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.4);
+}
+
+.resultsList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.resultItem {
+  width: 100%;
+  text-align: left;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  padding: 6px 8px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.resultItem:hover {
+  border-color: var(--accent);
+  background: rgba(124, 58, 237, 0.12);
+}
+.resultItem:focus-visible {
+  /* キーボード操作時にも現在位置がわかるよう枠線と影でフォーカスを強調する */
+  outline: none;
+  border-color: var(--accent-2);
+  box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.5);
+  background: rgba(124, 58, 237, 0.16);
+}
+
+.resultTitle {
+  display: block;
+  font-weight: 600;
+}
+
+.resultSnippet {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--text-subtle);
+}
+
+.emptyMessage {
+  margin: 0;
+  font-size: 11px;
+  color: var(--text-subtle);
+}
+
+.resultsNotice {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: var(--text-subtle);
+}
+
+@media (max-width: 840px) {
+  .searchSidebar {
+    order: 3;
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+}

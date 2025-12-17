@@ -1,0 +1,70 @@
+import { createSqliteStorage } from "./opfs-sqlite";
+
+export type Note = {
+  path: string;
+  title: string;
+  body: string;
+  updatedAt?: string;
+};
+
+export type SearchResult = {
+  path: string;
+  title: string;
+  snippet: string;
+};
+
+export interface NoteStorage {
+  loadNotes: () => Promise<Note[]>;
+  saveNote: (note: Note) => Promise<void>;
+  deleteNote: (path: Note["path"]) => Promise<void>;
+  importNotes: (notes: Note[]) => Promise<void>;
+  searchNotes?: (query: string) => Promise<SearchResult[]>;
+  listBacklinks: (targetPath: Note["path"]) => Promise<Note[]>;
+}
+
+/**
+ * OPFS + SQLite (worker経由)のストレージを初期化し、利用できない場合はエラーで停止する。
+ *
+ * @returns OPFS SQLite実装のNoteStorage
+ */
+export function createStorage(): NoteStorage {
+  const hasNavigator = typeof navigator !== "undefined";
+  const hasOpfs =
+    hasNavigator &&
+    Boolean(
+      (navigator as unknown as { storage?: { getDirectory?: () => unknown } }).storage
+        ?.getDirectory,
+    );
+
+  if (!hasOpfs) {
+    reportStorageInitIssue(
+      "OPFS is not available in this browser. Planty Wiki cannot keep notes across reloads.",
+    );
+  }
+
+  const disableSqlite = import.meta?.env?.VITE_USE_SQLITE === "false";
+  const canUseWorkerSqlite =
+    !disableSqlite &&
+    typeof Worker !== "undefined" &&
+    typeof SharedArrayBuffer !== "undefined" &&
+    (globalThis as typeof globalThis & { crossOriginIsolated?: boolean }).crossOriginIsolated ===
+      true;
+
+  if (!canUseWorkerSqlite) {
+    reportStorageInitIssue(
+      "Required browser features (SharedArrayBuffer / crossOriginIsolated) are missing, so the OPFS worker cannot start.",
+    );
+  }
+
+  console.info("Using SQLite on OPFS storage backend via worker");
+  return createSqliteStorage();
+}
+
+function reportStorageInitIssue(message: string): never {
+  const formatted = `Storage initialization failed: ${message}`;
+  console.error(formatted);
+  if (typeof window !== "undefined" && typeof window.alert === "function") {
+    window.alert(formatted);
+  }
+  throw new Error(formatted);
+}
