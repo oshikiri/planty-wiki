@@ -45,7 +45,7 @@ export function WikiLinkPlugin({ onWikiLinkClick }: WikiLinkPluginProps) {
     function handleClick(event: MouseEvent) {
       const target = event.target;
       if (!(target instanceof HTMLElement)) return;
-      const linkElement = target.closest(".planty-wikilink");
+      const linkElement = target.closest(`.${WikiLinkNode.CLASS_NAME}`);
       if (!(linkElement instanceof HTMLElement)) return;
       event.preventDefault();
       const text = linkElement.textContent ?? "";
