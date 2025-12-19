@@ -28,7 +28,7 @@
   padding-left: 0.75rem;
 }
 
-.lexical-editor-content .planty-wikilink {
+.lexical-editor-content .lexical-wikilink {
   color: var(--accent-2);
   cursor: pointer;
 }
@@ -43,7 +43,7 @@
   text-decoration-thickness: 0.16em;
 }
 
-.lexical-editor-content li[role="checkbox"][aria-checked="true"] .planty-wikilink {
+.lexical-editor-content li[role="checkbox"][aria-checked="true"] .lexical-wikilink {
   color: color-mix(in srgb, var(--text-subtle) 85%, var(--text) 15%);
 }
 

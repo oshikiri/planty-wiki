@@ -7,6 +7,8 @@ export type SerializedWikiLinkNode = SerializedTextNode & {
 };
 
 export class WikiLinkNode extends TextNode {
+  static readonly CLASS_NAME = "lexical-wikilink";
+
   static getType(): string {
     return "wikilink";
   }
@@ -34,7 +36,7 @@ export class WikiLinkNode extends TextNode {
 
   createDOM(config: EditorConfig): HTMLElement {
     const dom = super.createDOM(config);
-    dom.classList.add("planty-wikilink");
+    dom.classList.add(WikiLinkNode.CLASS_NAME);
     return dom;
   }
 
