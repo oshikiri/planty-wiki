@@ -33,10 +33,6 @@
   margin: 0;
 }
 
-:global(#root) {
-  min-height: 100vh;
-}
-
 .app {
   max-width: 1600px;
   margin: 0 auto;
