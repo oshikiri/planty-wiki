@@ -1,8 +1,8 @@
 import { useCallback, type Dispatch, type StateUpdater } from "preact/hooks";
 
 import { formatHashFromPath } from "../navigation";
-import type { Note, NoteStorage } from "../storage";
-import type { PendingSave } from "../types/note";
+import type { NoteStorage } from "../storage";
+import type { Note, PendingSave } from "../types/note";
 
 export type UseDeleteNoteParams = {
   defaultPage: string;

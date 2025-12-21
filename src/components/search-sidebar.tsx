@@ -1,7 +1,7 @@
 import { useId } from "preact/hooks";
 
 import styles from "./search-sidebar.module.css";
-import type { SearchResult } from "../storage";
+import type { SearchResult } from "../types/note";
 
 type SearchSidebarProps = {
   searchQuery: string;

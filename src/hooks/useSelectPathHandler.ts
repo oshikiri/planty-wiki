@@ -1,7 +1,8 @@
 import { useCallback, type Dispatch, type StateUpdater } from "preact/hooks";
 
 import { formatHashFromPath, normalizePath } from "../navigation";
-import type { Note, NoteStorage } from "../storage";
+import type { NoteStorage } from "../storage";
+import type { Note } from "../types/note";
 
 export type UseSelectPathHandlerParams = {
   defaultPage: string;

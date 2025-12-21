@@ -1,4 +1,5 @@
-import type { Note, NoteStorage, SearchResult } from "./index";
+import type { NoteStorage } from "./index";
+import type { Note, SearchResult } from "../types/note";
 import { callWorker } from "./sqlite-worker-client";
 
 /**

@@ -1,7 +1,6 @@
 import { useEffect, useState, type Dispatch, type StateUpdater } from "preact/hooks";
 
-import type { Note } from "../storage";
-import type { PendingSave } from "../types/note";
+import type { Note, PendingSave } from "../types/note";
 
 type UseAutoSaveParams = {
   pendingSave: PendingSave | null;

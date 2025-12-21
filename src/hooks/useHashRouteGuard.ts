@@ -1,7 +1,7 @@
 import { useEffect, type Dispatch, type MutableRef, type StateUpdater } from "preact/hooks";
 
 import { normalizePath, parseHashPath } from "../navigation";
-import type { Note } from "../storage";
+import type { Note } from "../types/note";
 
 type UseHashRouteGuardParams = {
   deriveTitle: (path: string) => string;

@@ -4,8 +4,8 @@ import { Editor } from "./components/editor";
 import { Sidebar } from "./components/sidebar";
 import { SearchSidebar } from "./components/search-sidebar";
 import { normalizePath } from "./navigation";
-import type { PendingSave } from "./types/note";
-import { createStorage, type Note, type NoteStorage } from "./storage";
+import type { Note, PendingSave } from "./types/note";
+import { createStorage, type NoteStorage } from "./storage";
 import { exportNotesToDirectory, importMarkdownFromDirectory } from "./storage/file-bridge";
 
 import { useBacklinks } from "./hooks/useBacklinks";

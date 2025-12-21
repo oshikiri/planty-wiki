@@ -2,7 +2,7 @@ import type { Ref } from "preact";
 import { useCallback, useEffect, useRef, useState } from "preact/hooks";
 
 import styles from "./sidebar.module.css";
-import type { Note } from "../storage";
+import type { Note } from "../types/note";
 
 type SidebarProps = {
   notes: Note[];

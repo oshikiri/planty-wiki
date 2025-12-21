@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from "preact/hooks";
 
-import type { Note, SearchResult } from "../storage";
+import type { Note, SearchResult } from "../types/note";
 
 type UseNoteSearchArgs = {
   storageSearch?: (query: string) => Promise<SearchResult[]>;

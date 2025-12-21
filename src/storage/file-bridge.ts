@@ -1,5 +1,6 @@
 import { normalizePath } from "../navigation";
-import type { Note, NoteStorage } from "./index";
+import type { NoteStorage } from "./index";
+import type { Note } from "../types/note";
 
 type DirectoryFileEntry = {
   relativePath: string;

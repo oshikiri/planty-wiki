@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "preact/hooks";
 
 import { extractWikiLinks } from "../navigation";
-import type { Note, NoteStorage } from "../storage";
+import type { NoteStorage } from "../storage";
+import type { Note } from "../types/note";
 
 export type Backlink = {
   path: string;

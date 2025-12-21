@@ -1,17 +1,5 @@
+import type { Note, SearchResult } from "../types/note";
 import { createSqliteStorage } from "./opfs-sqlite";
-
-export type Note = {
-  path: string;
-  title: string;
-  body: string;
-  updatedAt?: string;
-};
-
-export type SearchResult = {
-  path: string;
-  title: string;
-  snippet: string;
-};
 
 export interface NoteStorage {
   loadNotes: () => Promise<Note[]>;

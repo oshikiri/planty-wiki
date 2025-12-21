@@ -1,7 +1,8 @@
 import { useEffect, type Dispatch, type StateUpdater } from "preact/hooks";
 
 import { normalizePath, parseHashPath } from "../navigation";
-import type { Note, NoteStorage } from "../storage";
+import type { NoteStorage } from "../storage";
+import type { Note } from "../types/note";
 
 type SetNotesFromStorage = (next: Note[]) => void;
 
