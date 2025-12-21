@@ -1,8 +1,8 @@
 import { useCallback, type Dispatch, type StateUpdater } from "preact/hooks";
 
 import { formatHashFromPath, normalizePath } from "../navigation";
-import type { NoteStorage } from "../storage";
 import type { Note } from "../types/note";
+import type { NoteService } from "../services/note-service";
 
 export type UseSelectPathHandlerParams = {
   defaultPage: string;
@@ -13,7 +13,7 @@ export type UseSelectPathHandlerParams = {
   setNotes: Dispatch<StateUpdater<Note[]>>;
   setSelectedPath: Dispatch<StateUpdater<string>>;
   setStatusMessage: Dispatch<StateUpdater<string>>;
-  storage: NoteStorage;
+  noteService: NoteService;
 };
 
 /**
@@ -31,7 +31,7 @@ export function useSelectPathHandler({
   setNotes,
   setSelectedPath,
   setStatusMessage,
-  storage,
+  noteService,
 }: UseSelectPathHandlerParams) {
   return useCallback(
     (path: string) => {
@@ -44,7 +44,7 @@ export function useSelectPathHandler({
           const newNote = sanitizeNoteForSave({ path: normalized, title, body: "" });
           setNotes((prev) => [...prev, newNote]);
           try {
-            await storage.saveNote(newNote);
+            await noteService.saveNote(newNote);
           } catch (error) {
             console.error("Failed to create note via handleSelectPath", error);
             setStatusMessage("Failed to create note");
@@ -69,7 +69,7 @@ export function useSelectPathHandler({
       setNotes,
       setSelectedPath,
       setStatusMessage,
-      storage,
+      noteService,
     ],
   );
 }

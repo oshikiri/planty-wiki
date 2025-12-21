@@ -5,8 +5,7 @@ import { Sidebar } from "./components/sidebar";
 import { SearchSidebar } from "./components/search-sidebar";
 import { normalizePath } from "./navigation";
 import type { Note, PendingSave } from "./types/note";
-import { createStorage, type NoteStorage } from "./storage";
-import { exportNotesToDirectory, importMarkdownFromDirectory } from "./storage/file-bridge";
+import { createNoteService, type NoteService } from "./services/note-service";
 
 import { useBacklinks } from "./hooks/useBacklinks";
 import { useBootstrapNotes } from "./hooks/useBootstrapNotes";
@@ -27,28 +26,27 @@ const DEFAULT_PAGE = "/pages/index";
  * @returns ルートアプリケーションのJSX
  */
 export function App() {
-  const [storageState] = useState<{
-    storage: NoteStorage | null;
+  const [serviceState] = useState<{
+    noteService: NoteService | null;
     error: Error | null;
   }>(() => {
     try {
-      return { storage: createStorage(), error: null };
+      return { noteService: createNoteService(), error: null };
     } catch (error) {
       return {
-        storage: null,
+        noteService: null,
         error: error instanceof Error ? error : new Error(String(error)),
       };
     }
   });
 
-  const storageFromState = storageState.storage;
-  const storageInitError = storageState.error;
+  const noteService = serviceState.noteService;
+  const storageInitError = serviceState.error;
 
-  if (!storageFromState) {
+  if (!noteService) {
     // 永続ストレージを初期化できなければ通常のUIを出しても保存できないため、明示的に停止する
     return <StorageInitError message={storageInitError?.message} />;
   }
-  const storage = storageFromState;
   const [notes, setNotes] = useState<Note[]>([]);
   const [noteRevision, setNoteRevision] = useState(0);
   const [selectedPath, setSelectedPath] = useState<string>(DEFAULT_PAGE);
@@ -79,7 +77,7 @@ export function App() {
     results: searchResults,
     handleSearch,
   } = useNoteSearch({
-    storageSearch: storage.searchNotes,
+    searchNotes: noteService.searchNotes,
     notes,
   });
   const [pendingSave, setPendingSave] = useState<PendingSave | null>(null);
@@ -111,7 +109,7 @@ export function App() {
     setNotesFromStorage,
     setSelectedPath,
     setStatusMessage,
-    storage,
+    noteService,
   });
 
   const handleSelectPath = useSelectPathHandler({
@@ -123,12 +121,12 @@ export function App() {
     setNotes,
     setSelectedPath,
     setStatusMessage,
-    storage,
+    noteService,
   });
 
   const isDirty = draftBody !== current.body;
 
-  const backlinks = useBacklinks(notes, current, storage);
+  const backlinks = useBacklinks(notes, current, noteService);
 
   const handleChangeDraft = useCallback(
     (nextBody: string) => {
@@ -147,7 +145,7 @@ export function App() {
     sanitizeNoteForSave,
     setPendingSave,
     setNotes,
-    storageSave: storage.saveNote,
+    saveNote: noteService.saveNote,
     setStatusMessage,
   });
 
@@ -158,16 +156,19 @@ export function App() {
     setNotes,
     setSelectedPath,
     setStatusMessage,
-    storageSave: storage.saveNote,
+    saveNote: noteService.saveNote,
   });
 
   const handleImportMarkdown = useCallback(() => {
-    importMarkdownFromDirectory(storage, setNotesFromStorage, setStatusMessage);
-  }, [storage, setNotesFromStorage, setStatusMessage]);
+    noteService.importFromDirectory({
+      applyImportedNotes: setNotesFromStorage,
+      setStatusMessage,
+    });
+  }, [noteService, setNotesFromStorage, setStatusMessage]);
 
   const handleExportMarkdown = useCallback(() => {
-    exportNotesToDirectory(notes, setStatusMessage);
-  }, [notes]);
+    noteService.exportToDirectory({ notes, setStatusMessage });
+  }, [noteService, notes, setStatusMessage]);
 
   const handleDeleteNote = useDeleteNote({
     defaultPage: DEFAULT_PAGE,
@@ -181,7 +182,7 @@ export function App() {
     setPendingSave,
     setSelectedPath,
     setStatusMessage,
-    storage,
+    noteService,
   });
 
   const handleRequestDelete = useCallback((path: string) => {
