@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "preact/hooks";
 
 import { extractWikiLinks } from "../navigation";
-import type { NoteStorage } from "../storage";
 import type { Note } from "../types/note";
+import type { NoteService } from "../services/note-service";
 
 export type Backlink = {
   path: string;
@@ -15,12 +15,12 @@ export type Backlink = {
  *
  * @param notes クライアントが保持するノート一覧
  * @param current 編集中のノート
- * @param storage バックリンクAPIを提供するNoteStorage（未指定ならローカル走査のみ）
+ * @param noteService バックリンクAPIを提供するNoteService（未指定ならローカル走査のみ）
  * @returns Backlinkオブジェクトの配列
  */
-export function useBacklinks(notes: Note[], current: Note, storage?: NoteStorage): Backlink[] {
+export function useBacklinks(notes: Note[], current: Note, noteService?: NoteService): Backlink[] {
   const targetPath = current.path;
-  const canUseIndexedBacklinks = Boolean(storage?.listBacklinks);
+  const canUseIndexedBacklinks = Boolean(noteService?.listBacklinks);
   const [indexedBacklinks, setIndexedBacklinks] = useState<Backlink[] | null>(null);
   const fallbackBacklinks = useMemo(
     () => (canUseIndexedBacklinks ? [] : buildBacklinksFromNotes(notes, targetPath)),
@@ -28,14 +28,14 @@ export function useBacklinks(notes: Note[], current: Note, storage?: NoteStorage
   );
 
   useEffect(() => {
-    if (!canUseIndexedBacklinks || !storage?.listBacklinks) {
+    if (!canUseIndexedBacklinks || !noteService?.listBacklinks) {
       setIndexedBacklinks(null);
       return;
     }
     let isCancelled = false;
     const fetchBacklinks = async () => {
       try {
-        const linkingNotes = await storage.listBacklinks(targetPath);
+        const linkingNotes = await noteService.listBacklinks(targetPath);
         if (isCancelled) return;
         setIndexedBacklinks(buildBacklinksFromNotes(linkingNotes, targetPath));
       } catch (error) {
@@ -48,7 +48,7 @@ export function useBacklinks(notes: Note[], current: Note, storage?: NoteStorage
     return () => {
       isCancelled = true;
     };
-  }, [canUseIndexedBacklinks, notes, storage, targetPath]);
+  }, [canUseIndexedBacklinks, notes, noteService, targetPath]);
 
   if (canUseIndexedBacklinks && indexedBacklinks) {
     return indexedBacklinks;

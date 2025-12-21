@@ -3,7 +3,7 @@ import { useCallback, useRef, useState } from "preact/hooks";
 import type { Note, SearchResult } from "../types/note";
 
 type UseNoteSearchArgs = {
-  storageSearch?: (query: string) => Promise<SearchResult[]>;
+  searchNotes?: (query: string) => Promise<SearchResult[]>;
   notes: Note[];
 };
 
@@ -14,10 +14,10 @@ type TimeoutRef = { current: number | null };
 /**
  * useNoteSearchはクライアント/ストレージ検索をデバウンスしながら実行し、クエリと結果とハンドラを返す。
  *
- * @param params notes配列とstorage.searchNotesをまとめた引数
+ * @param params notes配列とsearchNotesをまとめた引数
  * @returns クエリ文字列・検索結果・検索ハンドラ
  */
-export function useNoteSearch({ storageSearch, notes }: UseNoteSearchArgs) {
+export function useNoteSearch({ searchNotes, notes }: UseNoteSearchArgs) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[] | null>(null);
   const debounceRef = useRef<number | null>(null);
@@ -34,7 +34,7 @@ export function useNoteSearch({ storageSearch, notes }: UseNoteSearchArgs) {
           nextQuery,
           requestId,
           latestRequestRef,
-          storageSearch,
+          searchNotes,
           notes,
           setResults,
         }).catch((error) => {
@@ -42,7 +42,7 @@ export function useNoteSearch({ storageSearch, notes }: UseNoteSearchArgs) {
         });
       }, SEARCH_DEBOUNCE_MS);
     },
-    [notes, storageSearch],
+    [notes, searchNotes],
   );
 
   return { query, results, handleSearch };
@@ -52,7 +52,7 @@ type ScheduledSearchArgs = {
   nextQuery: string;
   requestId: number;
   latestRequestRef: NumberRef;
-  storageSearch?: (query: string) => Promise<SearchResult[]>;
+  searchNotes?: (query: string) => Promise<SearchResult[]>;
   notes: Note[];
   setResults: (results: SearchResult[] | null) => void;
 };
@@ -61,7 +61,7 @@ async function runScheduledSearch({
   nextQuery,
   requestId,
   latestRequestRef,
-  storageSearch,
+  searchNotes,
   notes,
   setResults,
 }: ScheduledSearchArgs) {
@@ -72,7 +72,7 @@ async function runScheduledSearch({
     }
     return;
   }
-  const remoteResults = await tryRemoteSearch(trimmed, storageSearch);
+  const remoteResults = await tryRemoteSearch(trimmed, searchNotes);
   if (requestId !== latestRequestRef.current) {
     return;
   }
@@ -85,18 +85,15 @@ async function runScheduledSearch({
 
 async function tryRemoteSearch(
   query: string,
-  storageSearch?: (query: string) => Promise<SearchResult[]>,
+  searchNotes?: (query: string) => Promise<SearchResult[]>,
 ) {
-  if (typeof storageSearch !== "function") {
+  if (typeof searchNotes !== "function") {
     return null;
   }
   try {
-    return await storageSearch(query);
+    return await searchNotes(query);
   } catch (error) {
-    console.warn(
-      "Failed to search notes via storage.searchNotes; falling back to client-side filter",
-      error,
-    );
+    console.warn("Failed to search notes via service; falling back to client-side filter", error);
     return null;
   }
 }

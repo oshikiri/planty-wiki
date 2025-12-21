@@ -9,14 +9,14 @@ type UseHashRouteGuardParams = {
   setNotes: Dispatch<StateUpdater<Note[]>>;
   setSelectedPath: Dispatch<StateUpdater<string>>;
   setStatusMessage: Dispatch<StateUpdater<string>>;
-  storageSave: (note: Note) => Promise<void>;
+  saveNote: (note: Note) => Promise<void>;
   notesRef: MutableRef<Note[]>;
 };
 
 /**
  * useHashRouteGuardはhashchangeイベントを監視し、指定パスが存在しなければ作成して遷移させる。
  *
- * @param params ノート配列refやストレージ保存関数などハッシュ監視に必要な依存
+ * @param params ノート配列refや保存関数などハッシュ監視に必要な依存
  * @returns void
  */
 export function useHashRouteGuard({
@@ -25,7 +25,7 @@ export function useHashRouteGuard({
   setNotes,
   setSelectedPath,
   setStatusMessage,
-  storageSave,
+  saveNote,
   notesRef,
 }: UseHashRouteGuardParams) {
   useEffect(() => {
@@ -42,7 +42,7 @@ export function useHashRouteGuard({
         const newNote = sanitizeNoteForSave({ path: next, title, body: "" });
         setNotes((prev) => [...prev, newNote]);
         try {
-          await storageSave(newNote);
+          await saveNote(newNote);
         } catch (error) {
           console.error("Failed to create note via hashchange", error);
           setStatusMessage("Failed to create note from hash");
@@ -63,6 +63,6 @@ export function useHashRouteGuard({
     setNotes,
     setSelectedPath,
     setStatusMessage,
-    storageSave,
+    saveNote,
   ]);
 }

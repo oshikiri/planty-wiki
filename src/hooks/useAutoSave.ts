@@ -7,12 +7,12 @@ type UseAutoSaveParams = {
   sanitizeNoteForSave: (note: Note) => Note;
   setPendingSave: Dispatch<StateUpdater<PendingSave | null>>;
   setNotes: Dispatch<StateUpdater<Note[]>>;
-  storageSave: (note: Note) => Promise<void>;
+  saveNote: (note: Note) => Promise<void>;
   setStatusMessage: Dispatch<StateUpdater<string>>;
 };
 
 /**
- * useAutoSaveは、pendingSaveまたはretrySnapshotを監視し、800ms後にsanitize→UIアップデート→storageSaveを順に実行する。
+ * useAutoSaveは、pendingSaveまたはretrySnapshotを監視し、800ms後にsanitize→UIアップデート→保存を順に実行する。
  * 保存が失敗した場合はretry専用stateへ差分を残し、次のeffectサイクルで同じ処理を再試行する。
  *
  * @param params pendingSaveやストレージ保存関数など自動保存に必要な依存関係
@@ -23,7 +23,7 @@ export function useAutoSave({
   sanitizeNoteForSave,
   setPendingSave,
   setNotes,
-  storageSave,
+  saveNote,
   setStatusMessage,
 }: UseAutoSaveParams) {
   // pendingSaveと独立したretrySnapshotで保存失敗分を保持し、ストレージ復旧後に再実行できるようにする
@@ -36,7 +36,7 @@ export function useAutoSave({
       sanitizeNoteForSave,
       setPendingSave,
       setNotes,
-      storageSave,
+      saveNote,
       setStatusMessage,
       setRetrySnapshot,
     });
@@ -47,7 +47,7 @@ export function useAutoSave({
     setNotes,
     setPendingSave,
     setStatusMessage,
-    storageSave,
+    saveNote,
   ]);
 }
 
@@ -60,7 +60,7 @@ type ScheduleParams = {
   sanitizeNoteForSave: (note: Note) => Note;
   setPendingSave: Dispatch<StateUpdater<PendingSave | null>>;
   setNotes: Dispatch<StateUpdater<Note[]>>;
-  storageSave: (note: Note) => Promise<void>;
+  saveNote: (note: Note) => Promise<void>;
   setStatusMessage: Dispatch<StateUpdater<string>>;
   setRetrySnapshot: Dispatch<StateUpdater<PendingSave | null>>;
 };
@@ -98,7 +98,7 @@ async function runAutoSaveTask({
   sanitizeNoteForSave,
   setPendingSave,
   setNotes,
-  storageSave,
+  saveNote,
   setStatusMessage,
   setRetrySnapshot,
 }: TaskParams) {
@@ -113,7 +113,7 @@ async function runAutoSaveTask({
   });
   setNotes((prev) => upsertNote(prev, nextNote));
   try {
-    await storageSave(nextNote);
+    await saveNote(nextNote);
     setStatusMessage("Auto-saved changes");
     if (isRetrying) {
       clearRetrySnapshot(snapshot, setRetrySnapshot);

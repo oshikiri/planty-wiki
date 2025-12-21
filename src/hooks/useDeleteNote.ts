@@ -1,8 +1,8 @@
 import { useCallback, type Dispatch, type StateUpdater } from "preact/hooks";
 
 import { formatHashFromPath } from "../navigation";
-import type { NoteStorage } from "../storage";
 import type { Note, PendingSave } from "../types/note";
+import type { NoteService } from "../services/note-service";
 
 export type UseDeleteNoteParams = {
   defaultPage: string;
@@ -16,7 +16,7 @@ export type UseDeleteNoteParams = {
   setPendingSave: Dispatch<StateUpdater<PendingSave | null>>;
   setSelectedPath: Dispatch<StateUpdater<string>>;
   setStatusMessage: Dispatch<StateUpdater<string>>;
-  storage: NoteStorage;
+  noteService: NoteService;
 };
 
 /**
@@ -37,7 +37,7 @@ export function useDeleteNote({
   setPendingSave,
   setSelectedPath,
   setStatusMessage,
-  storage,
+  noteService,
 }: UseDeleteNoteParams) {
   return useCallback(async () => {
     if (!pendingDeletionPath) return;
@@ -47,9 +47,9 @@ export function useDeleteNote({
     const previousNotes = notes;
     const remaining = previousNotes.filter((note) => note.path !== path);
     setNotes(remaining);
-    const deleted = await deleteNoteFromStorage(
+    const deleted = await deleteNoteViaService(
       path,
-      storage,
+      noteService,
       setStatusMessage,
       setNotes,
       previousNotes,
@@ -65,7 +65,7 @@ export function useDeleteNote({
       setNotes,
       setSelectedPath,
       setStatusMessage,
-      storage,
+      noteService,
     });
     if (handledEmpty) {
       return;
@@ -86,7 +86,7 @@ export function useDeleteNote({
     setPendingSave,
     setSelectedPath,
     setStatusMessage,
-    storage,
+    noteService,
   ]);
 }
 
@@ -123,15 +123,15 @@ function clearPendingSaveForPath(
   });
 }
 
-async function deleteNoteFromStorage(
+async function deleteNoteViaService(
   path: string,
-  storage: NoteStorage,
+  noteService: NoteService,
   setStatusMessage: Dispatch<StateUpdater<string>>,
   setNotes: Dispatch<StateUpdater<Note[]>>,
   previousNotes: Note[],
 ) {
   try {
-    await storage.deleteNote(path);
+    await noteService.deleteNote(path);
     return true;
   } catch (error) {
     console.error("Failed to delete note from storage", error);
@@ -149,7 +149,7 @@ type HandleEmptyAfterDeleteParams = {
   setNotes: Dispatch<StateUpdater<Note[]>>;
   setSelectedPath: Dispatch<StateUpdater<string>>;
   setStatusMessage: Dispatch<StateUpdater<string>>;
-  storage: NoteStorage;
+  noteService: NoteService;
 };
 
 async function handleEmptyAfterDelete({
@@ -160,7 +160,7 @@ async function handleEmptyAfterDelete({
   setNotes,
   setSelectedPath,
   setStatusMessage,
-  storage,
+  noteService,
 }: HandleEmptyAfterDeleteParams) {
   if (remaining.length) {
     return false;
@@ -172,7 +172,7 @@ async function handleEmptyAfterDelete({
   });
   setNotes([fallbackNote]);
   try {
-    await storage.saveNote(fallbackNote);
+    await noteService.saveNote(fallbackNote);
     setStatusMessage("Created a new default page after deleting the last note");
   } catch (error) {
     console.error("Failed to recreate default note after deletion", error);
