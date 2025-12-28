@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks";
 
 import { Editor } from "./components/editor";
+import { QueryPage } from "./components/query-page";
 import { Sidebar } from "./components/sidebar";
 import { SearchSidebar } from "./components/search-sidebar";
 import { normalizePath } from "./navigation";
 import type { Note, PendingSave } from "./types/note";
 import { createNoteService, type NoteService } from "./services/note-service";
+import { createQueryService } from "./services/query-service";
 
 import { useBacklinks } from "./hooks/useBacklinks";
 import { useBootstrapNotes } from "./hooks/useBootstrapNotes";
@@ -19,6 +21,7 @@ import { useStatusMessage } from "./hooks/useStatusMessage";
 import styles from "./app.module.css";
 
 const DEFAULT_PAGE = "/pages/index";
+const QUERY_PAGE = "/tools/query";
 
 /**
  * Planty Wiki全体を束ねるルートコンポーネントを描画する。
@@ -42,6 +45,8 @@ export function App() {
 
   const noteService = serviceState.noteService;
   const storageInitError = serviceState.error;
+  const queryService = useMemo(() => createQueryService(), []);
+  const reservedPaths = useMemo(() => [QUERY_PAGE], []);
 
   if (!noteService) {
     // 永続ストレージを初期化できなければ通常のUIを出しても保存できないため、明示的に停止する
@@ -103,6 +108,7 @@ export function App() {
 
   useBootstrapNotes({
     defaultPage: DEFAULT_PAGE,
+    reservedPaths,
     deriveTitle,
     sanitizeNoteForSave,
     setNotes,
@@ -114,6 +120,7 @@ export function App() {
 
   const handleSelectPath = useSelectPathHandler({
     defaultPage: DEFAULT_PAGE,
+    reservedPaths,
     deriveTitle,
     notes,
     sanitizeNoteForSave,
@@ -151,6 +158,7 @@ export function App() {
 
   useHashRouteGuard({
     deriveTitle,
+    reservedPaths,
     notesRef,
     sanitizeNoteForSave,
     setNotes,
@@ -200,6 +208,7 @@ export function App() {
           notes={notes}
           selectedPath={selectedPath}
           onSelectPath={handleSelectPath}
+          onOpenQuery={() => handleSelectPath(QUERY_PAGE)}
           onImportMarkdown={handleImportMarkdown}
           onExportMarkdown={handleExportMarkdown}
           onDeleteNote={handleRequestDelete}
@@ -207,15 +216,19 @@ export function App() {
           onCancelDelete={handleCancelDelete}
           onConfirmDelete={handleDeleteNote}
         />
-        <Editor
-          note={current}
-          noteRevision={noteRevision}
-          onChangeDraft={handleChangeDraft}
-          statusMessage={statusMessage}
-          isDirty={isDirty}
-          backlinks={backlinks}
-          onSelectPath={handleSelectPath}
-        />
+        {selectedPath === QUERY_PAGE ? (
+          <QueryPage runQuery={queryService.runQuery} />
+        ) : (
+          <Editor
+            note={current}
+            noteRevision={noteRevision}
+            onChangeDraft={handleChangeDraft}
+            statusMessage={statusMessage}
+            isDirty={isDirty}
+            backlinks={backlinks}
+            onSelectPath={handleSelectPath}
+          />
+        )}
         <SearchSidebar
           searchQuery={searchQuery}
           onChangeSearchQuery={handleSearch}

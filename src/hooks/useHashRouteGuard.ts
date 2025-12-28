@@ -5,6 +5,7 @@ import type { Note } from "../types/note";
 
 type UseHashRouteGuardParams = {
   deriveTitle: (path: string) => string;
+  reservedPaths: string[];
   sanitizeNoteForSave: (note: Note) => Note;
   setNotes: Dispatch<StateUpdater<Note[]>>;
   setSelectedPath: Dispatch<StateUpdater<string>>;
@@ -21,6 +22,7 @@ type UseHashRouteGuardParams = {
  */
 export function useHashRouteGuard({
   deriveTitle,
+  reservedPaths,
   sanitizeNoteForSave,
   setNotes,
   setSelectedPath,
@@ -34,6 +36,10 @@ export function useHashRouteGuard({
       const next = hashValue ? normalizePath(hashValue) : null;
       const latestNotes = notesRef.current;
       if (!next || !latestNotes.length) return;
+      if (reservedPaths.includes(next)) {
+        setSelectedPath(next);
+        return;
+      }
 
       // notesトリガで登録すると大量に呼び出されてパフォーマンスが落ちるため、マウント/アンマウント時のみ走るように定義する
       const exists = latestNotes.some((note) => note.path === next);
@@ -58,6 +64,7 @@ export function useHashRouteGuard({
     };
   }, [
     deriveTitle,
+    reservedPaths,
     notesRef,
     sanitizeNoteForSave,
     setNotes,

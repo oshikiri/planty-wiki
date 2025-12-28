@@ -6,6 +6,7 @@ import type { NoteService } from "../services/note-service";
 
 export type UseSelectPathHandlerParams = {
   defaultPage: string;
+  reservedPaths: string[];
   deriveTitle: (path: string) => string;
   notes: Note[];
   sanitizeNoteForSave: (note: Note) => Note;
@@ -24,6 +25,7 @@ export type UseSelectPathHandlerParams = {
  */
 export function useSelectPathHandler({
   defaultPage,
+  reservedPaths,
   deriveTitle,
   notes,
   sanitizeNoteForSave,
@@ -37,6 +39,12 @@ export function useSelectPathHandler({
     (path: string) => {
       const run = async () => {
         const normalized = path ? normalizePath(path) : defaultPage;
+        if (reservedPaths.includes(normalized)) {
+          setSelectedPath(normalized);
+          setDraftBody("");
+          window.location.hash = formatHashFromPath(normalized);
+          return;
+        }
         const existingNote = notes.find((note) => note.path === normalized);
         let nextBody = existingNote?.body ?? "";
         if (!existingNote) {
@@ -62,6 +70,7 @@ export function useSelectPathHandler({
     },
     [
       defaultPage,
+      reservedPaths,
       deriveTitle,
       notes,
       sanitizeNoteForSave,

@@ -4,7 +4,8 @@ type WorkerRequestType =
   | "bulkSaveNotes"
   | "deleteNote"
   | "searchNotes"
-  | "listBacklinks";
+  | "listBacklinks"
+  | "runQuery";
 
 type WorkerResponse =
   | { id: number; ok: true; result: unknown }

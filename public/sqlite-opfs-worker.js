@@ -1,5 +1,6 @@
 let dbPromise = null;
 const cancelledRequestIds = new Set();
+const MAX_QUERY_ROWS = 200;
 
 self.onmessage = async function (event) {
   const data = event.data || {};
@@ -55,6 +56,11 @@ self.onmessage = async function (event) {
 
     if (type === "listBacklinks") {
       handleListBacklinks(db, id, payload);
+      return;
+    }
+
+    if (type === "runQuery") {
+      handleRunQuery(db, id, payload);
       return;
     }
 
@@ -343,6 +349,69 @@ function handleListBacklinks(db, id, payload) {
     },
   });
   postIfNotCancelled(id, { id: id, ok: true, result: rows });
+}
+
+function handleRunQuery(db, id, payload) {
+  var query = "";
+  if (payload && typeof payload.query === "string") {
+    query = payload.query.trim();
+  }
+  if (!query) {
+    postIfNotCancelled(id, { id: id, ok: false, error: "Query is empty" });
+    return;
+  }
+  var sanitized = stripTrailingSemicolons(query);
+  if (sanitized.indexOf(";") !== -1) {
+    postIfNotCancelled(id, { id: id, ok: false, error: "Only a single query is supported" });
+    return;
+  }
+  if (!isSelectQuery(sanitized)) {
+    postIfNotCancelled(id, { id: id, ok: false, error: "Only SELECT queries are supported" });
+    return;
+  }
+  var rows = [];
+  var columns = [];
+  try {
+    db.exec({
+      sql: sanitized,
+      rowMode: "object",
+      callback: function (row) {
+        if (!row || typeof row !== "object") return;
+        if (columns.length === 0) {
+          columns = Object.keys(row);
+        }
+        if (rows.length <= MAX_QUERY_ROWS) {
+          rows.push(columns.map(function (column) {
+            return row[column];
+          }));
+        }
+      },
+    });
+    var truncated = rows.length > MAX_QUERY_ROWS;
+    if (truncated) {
+      rows = rows.slice(0, MAX_QUERY_ROWS);
+    }
+    postIfNotCancelled(id, {
+      id: id,
+      ok: true,
+      result: { columns: columns, rows: rows, truncated: truncated },
+    });
+  } catch (error) {
+    postIfNotCancelled(id, {
+      id: id,
+      ok: false,
+      error: error && error.message ? String(error.message) : String(error),
+    });
+  }
+}
+
+function stripTrailingSemicolons(text) {
+  return String(text || "").replace(/;+\s*$/, "");
+}
+
+function isSelectQuery(text) {
+  var normalized = String(text || "").trim().toLowerCase();
+  return normalized.indexOf("select") === 0 || normalized.indexOf("with") === 0;
 }
 
 function initializeFtsStructures(db) {

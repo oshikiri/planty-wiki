@@ -8,6 +8,7 @@ type SetNotesFromStorage = (next: Note[]) => void;
 
 export type UseBootstrapNotesParams = {
   defaultPage: string;
+  reservedPaths: string[];
   deriveTitle: (path: string) => string;
   sanitizeNoteForSave: (note: Note) => Note;
   setNotes: Dispatch<StateUpdater<Note[]>>;
@@ -25,6 +26,7 @@ export type UseBootstrapNotesParams = {
  */
 export function useBootstrapNotes({
   defaultPage,
+  reservedPaths,
   deriveTitle,
   sanitizeNoteForSave,
   setNotes,
@@ -43,6 +45,12 @@ export function useBootstrapNotes({
         const hashPath = parseHashPath();
         const normalized = hashPath ? normalizePath(hashPath) : null;
         if (normalized) {
+          if (reservedPaths.includes(normalized)) {
+            if (isMounted) {
+              setSelectedPath(normalized);
+            }
+            return;
+          }
           await ensureNoteExists({
             isMounted,
             normalized,
@@ -89,6 +97,7 @@ export function useBootstrapNotes({
     };
   }, [
     defaultPage,
+    reservedPaths,
     deriveTitle,
     sanitizeNoteForSave,
     setNotes,

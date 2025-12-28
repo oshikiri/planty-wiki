@@ -8,6 +8,7 @@ type SidebarProps = {
   notes: Note[];
   selectedPath: string;
   onSelectPath: (path: string) => void;
+  onOpenQuery: () => void;
   onImportMarkdown: () => void;
   onExportMarkdown: () => void;
   onDeleteNote: (path: Note["path"]) => void;
@@ -40,7 +41,11 @@ export function Sidebar(props: SidebarProps) {
   const contextMenu = useSidebarContextMenu(props.onSelectPath, props.onDeleteNote);
   return (
     <nav class={styles.sidebar} ref={contextMenu.containerRef}>
-      <SidebarHeader onImport={props.onImportMarkdown} onExport={props.onExportMarkdown} />
+      <SidebarHeader
+        onImport={props.onImportMarkdown}
+        onExport={props.onExportMarkdown}
+        onOpenQuery={props.onOpenQuery}
+      />
       <SidebarList
         notes={props.notes}
         selectedPath={props.selectedPath}
@@ -66,11 +71,22 @@ export function Sidebar(props: SidebarProps) {
   );
 }
 
-function SidebarHeader({ onImport, onExport }: { onImport: () => void; onExport: () => void }) {
+function SidebarHeader({
+  onImport,
+  onExport,
+  onOpenQuery,
+}: {
+  onImport: () => void;
+  onExport: () => void;
+  onOpenQuery: () => void;
+}) {
   return (
     <header class={styles.sidebarHeader}>
       <h2 class={styles.sidebarTitle}>Notes</h2>
       <div class={styles.sidebarActions}>
+        <button type="button" class={styles.sidebarActionButton} onClick={onOpenQuery}>
+          Query
+        </button>
         <button type="button" class={styles.sidebarActionButton} onClick={onImport}>
           Import
         </button>
