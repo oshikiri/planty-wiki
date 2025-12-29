@@ -22,10 +22,10 @@ type DeleteNoteParams = {
 };
 
 /**
- * 削除保留中のノートを確定し、必要に応じてデフォルトノート作成や次のノート遷移まで行うユースケース。
+ * Confirms deletion for the pending note and performs default-note creation or next-note routing as needed.
  *
- * @param params ノート一覧や状態更新ハンドラなど削除に必要な依存
- * @returns 完了を待つPromise
+ * @param params Dependencies required for deletion such as note lists and state setters
+ * @returns Promise that resolves once the process finishes
  */
 export async function deletePendingNote({
   defaultPage,

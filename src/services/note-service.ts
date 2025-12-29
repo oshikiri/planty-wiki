@@ -18,10 +18,10 @@ export type NoteService = {
 };
 
 /**
- * 指定されたNoteRepositoryをラップしてNoteServiceを構築する。UIテスト向けのモック差し替えにも利用する。
+ * Wraps the given NoteRepository to build a NoteService, allowing easy mocking in UI tests.
  *
- * @param repository 永続層の抽象化
- * @returns repositoryを委譲先とするNoteService
+ * @param repository Abstraction of the persistence layer
+ * @returns NoteService that delegates to the repository
  */
 export function createNoteService(repository: NoteRepository): NoteService {
   return {
@@ -50,10 +50,10 @@ export function createNoteService(repository: NoteRepository): NoteService {
 }
 
 /**
- * 永続層に依存しないインメモリ実装のNoteServiceを生成し、UIテストのモックに利用する。
+ * Creates an in-memory NoteService independent from the persistence layer for UI testing.
  *
- * @param initialNotes 初期投入するノート配列
- * @returns インメモリで完結するNoteService
+ * @param initialNotes Array of notes used to seed the service
+ * @returns NoteService that operates entirely in memory
  */
 export function createInMemoryNoteService(initialNotes: Note[] = []): NoteService {
   const repository: NoteRepository = createInMemoryRepository(initialNotes);

@@ -6,10 +6,10 @@ export type Route = { type: "note"; path: string } | { type: "query" };
 export const QUERY_ROUTE: Route = { type: "query" };
 
 /**
- * location.hash文字列からRouteを復元し、未指定時はnullを返す。
+ * Restores a Route from a location.hash string, returning null when no route is specified.
  *
- * @param {string} hash window.location.hashから取得したハッシュ文字列
- * @returns {Route | null} hashが空の場合はnull
+ * @param {string} hash Hash string read from window.location.hash
+ * @returns {Route | null} Null when the hash is empty
  */
 export function parseHashLocation(hash: string): Route | null {
   const decoded = decodeHash(hash);
@@ -24,10 +24,10 @@ export function parseHashLocation(hash: string): Route | null {
 }
 
 /**
- * Routeに応じてwindow.location.hashへセットできる文字列表現を生成する。
+ * Generates a window.location.hash-friendly string for the given Route.
  *
- * @param {Route} route 遷移先
- * @returns {string} `#/pages/...`形式のハッシュ文字列
+ * @param {Route} route Destination route
+ * @returns {string} Hash string formatted as `#/pages/...`
  */
 export function formatHashLocation(route: Route): string {
   if (route.type === "query") {
@@ -37,10 +37,10 @@ export function formatHashLocation(route: Route): string {
 }
 
 /**
- * `#`付きハッシュ文字列をデコードし、生のstringへ復元する。
+ * Decodes a hash string (with `#`) back into a raw string.
  *
- * @param {string} hash window.location.hash値
- * @returns {string | null} デコード済みハッシュ。空の場合はnull
+ * @param {string} hash Value from window.location.hash
+ * @returns {string | null} Decoded hash, or null when empty
  */
 function decodeHash(hash: string): string | null {
   const raw = hash.replace(/^#/, "");

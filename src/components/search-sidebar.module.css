@@ -83,7 +83,7 @@
   background: rgba(124, 58, 237, 0.12);
 }
 .resultItem:focus-visible {
-  /* キーボード操作時にも現在位置がわかるよう枠線と影でフォーカスを強調する */
+  /* Emphasize focus with borders and shadows so keyboard users can track the current item. */
   outline: none;
   border-color: var(--accent-2);
   box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.5);

@@ -11,9 +11,9 @@ export type QueryService = {
 };
 
 /**
- * SQLiteワーカーにSQLクエリを委譲するQueryServiceを生成する。
+ * Creates a QueryService that delegates SQL execution to the SQLite worker.
  *
- * @returns SQL実行を担うQueryService
+ * @returns QueryService responsible for running SQL
  */
 export function createQueryService(): QueryService {
   return {

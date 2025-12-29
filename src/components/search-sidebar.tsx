@@ -11,13 +11,13 @@ type SearchSidebarProps = {
 };
 
 /**
- * ノート検索欄と結果リストを表示し、選択されたノートパスを親へ通知する。
+ * Displays the search input and result list, then notifies the parent when a note is selected.
  *
- * @param props.searchQuery 現在の検索文字列
- * @param props.onChangeSearchQuery 入力変更時に検索文字列を更新するコールバック
- * @param props.searchResults ストレージ検索の結果一覧（null時は未検索）
- * @param props.onSelectPath 検索結果からページを開く際のハンドラ
- * @returns サイドバー領域のJSX
+ * @param props.searchQuery Current search text
+ * @param props.onChangeSearchQuery Callback that updates the search text
+ * @param props.searchResults Result list from the storage-backed search (null when idle)
+ * @param props.onSelectPath Handler executed when opening a page from the results
+ * @returns JSX for the sidebar section
  */
 export function SearchSidebar(props: SearchSidebarProps) {
   const searchInputId = useId();

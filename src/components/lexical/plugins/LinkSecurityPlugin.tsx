@@ -5,10 +5,9 @@ import { LinkNode } from "@lexical/link";
 const REQUIRED_REL_VALUES = ["noopener", "noreferrer"] as const;
 
 /**
- * 全てのリンクに対して `target="_blank"` を既定値とし、`rel` に `noopener noreferrer` を追加することで
- * リンククリック時のリファラ漏洩や opener 経由のリスクを低減する Lexical プラグイン。
+ * Lexical plugin that sets `target="_blank"` and adds `rel="noopener noreferrer"` to every link to mitigate referrer leaks and opener risks.
  *
- * @returns LinkNode に対するセキュリティ設定を行う Lexical プラグイン
+ * @returns Plugin that applies security defaults to LinkNode
  */
 export function LinkSecurityPlugin() {
   const [editor] = useLexicalComposerContext();

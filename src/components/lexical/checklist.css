@@ -1,5 +1,5 @@
 .lexical-editor-content li[role="checkbox"] {
-  /* チェック装飾一式をまとめるためのカスタムプロパティ */
+  /* Custom properties that consolidate checklist decoration parameters. */
   --checkbox-size: 0.7rem;
   --checkbox-padding: 0.25rem;
   --checkbox-left: 0.25rem;

@@ -1,7 +1,7 @@
 import type { Note, SearchResult } from "./note";
 
 /**
- * NoteRepositoryはNoteストレージの抽象インターフェースを定義する。
+ * NoteRepository defines the abstraction layer for note storage.
  */
 export interface NoteRepository {
   loadAll(): Promise<Note[]>;

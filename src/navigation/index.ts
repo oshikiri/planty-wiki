@@ -4,10 +4,10 @@ export type WikiLink = {
 };
 
 /**
- * ノートパスを#/pages/foo形式のハッシュ値へフォーマットし、セグメント単位でエンコードする。
+ * Formats a note path into a `#/pages/foo`-style hash while encoding each segment.
  *
- * @param path ノートの絶対パス
- * @returns window.location.hashへ代入できる文字列
+ * @param path Absolute note path
+ * @returns String assignable to window.location.hash
  */
 export function formatHashFromPath(path: string): string {
   const normalized = normalizePath(path);
@@ -20,10 +20,10 @@ export function formatHashFromPath(path: string): string {
 }
 
 /**
- * パス表記を`/pages/foo`のような安全な絶対パスへ正規化し、`.`や`..`を除去する。
+ * Normalizes a path into a safe absolute form such as `/pages/foo`, resolving `.` and `..`.
  *
- * @param path ユーザー入力やWikiリンク由来の生パス
- * @returns 正規化された絶対パス。空文字ならルート"/"
+ * @param path Raw path from user input or wiki link
+ * @returns Normalized absolute path, defaulting to `/` when empty
  */
 export function normalizePath(path: string): string {
   const decoded = ensureLeadingSlash(path);
@@ -41,7 +41,7 @@ function ensureLeadingSlash(value: string): string {
 }
 
 /**
- * ルート「/」を除いて末尾の不要なスラッシュを取り除く
+ * Removes trailing slashes except for the root `/`.
  */
 function trimTrailingSlashes(value: string): string {
   if (value === "/") {
@@ -51,14 +51,14 @@ function trimTrailingSlashes(value: string): string {
 }
 
 /**
- * Windows風のバックスラッシュを正規のスラッシュへ置き換える
+ * Replaces Windows-style backslashes with forward slashes.
  */
 function normalizeSeparators(value: string): string {
   return value.replace(/\\/g, "/");
 }
 
 /**
- * "." や ".." を解決し空要素を捨てて安全なセグメント配列に変換する
+ * Resolves "." and ".." segments while dropping empty parts to produce a safe segment array.
  */
 function buildNormalizedSegments(value: string): string[] {
   const segments = value.split("/");
@@ -85,7 +85,7 @@ function buildNormalizedSegments(value: string): string[] {
 }
 
 /**
- * 制御文字やスラッシュを削除しつつUnicode文字は保持したままセグメントを整える
+ * Removes control characters and slashes while preserving Unicode characters in the segment.
  */
 function sanitizePathSegment(segment: string): string {
   let result = "";
@@ -101,10 +101,10 @@ function sanitizePathSegment(segment: string): string {
 }
 
 /**
- * Markdown本文から`[[Label]]`形式のリンクを抽出し、重複除去して返す。
+ * Extracts `[[Label]]` wiki links from Markdown and returns them without duplicates.
  *
- * @param body Wikiリンクを含む可能性のあるMarkdown本文
- * @returns 抽出したリンクの配列（pathと表示名）
+ * @param body Markdown body that may contain wiki links
+ * @returns Array of links containing path and display text
  */
 export function extractWikiLinks(body: string): WikiLink[] {
   const matches = [...body.matchAll(/\[\[([^[\]]+)\]\]/g)];

@@ -21,11 +21,11 @@ export type NoteInput = {
 };
 
 /**
- * buildNoteはNoteInputを受け取り、パス正規化やタイトル補完を経て完全なNoteエンティティへ変換する。
+ * Converts a NoteInput into a fully normalized Note entity with path normalization and title fallback.
  *
- * @param input 永続化前のNote入力
- * @param fallbackTitle Titleが空だった場合に使うフォールバック
- * @returns 正規化されたNote
+ * @param input Note data prior to persistence
+ * @param fallbackTitle Fallback title used when the provided title is empty
+ * @returns Normalized Note
  */
 export function buildNote(input: NoteInput, fallbackTitle = "untitled"): Note {
   const normalizedPath = normalizePath(input.path);
@@ -40,11 +40,11 @@ export function buildNote(input: NoteInput, fallbackTitle = "untitled"): Note {
 }
 
 /**
- * deriveTitleFromPathはノートパスの末尾セグメントからタイトル文字列を導出し、空ならフォールバックを返す。
+ * Derives the title string from the last segment of a note path, falling back when empty.
  *
- * @param path ノートのパス
- * @param fallback パスが空だった場合に使うタイトル
- * @returns パス末尾のセグメントまたはフォールバック
+ * @param path Note path
+ * @param fallback Title used when the path has no segments
+ * @returns Last segment or the fallback
  */
 export function deriveTitleFromPath(path: string, fallback = "untitled"): string {
   const segments = path.split("/").filter(Boolean);

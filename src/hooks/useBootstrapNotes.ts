@@ -21,9 +21,9 @@ export type UseBootstrapNotesParams = {
 };
 
 /**
- * useBootstrapNotesは初回ロード時のノート取得とhash指定ページの作成を担当し、App側の副作用ロジックを簡潔に保つ。
+ * useBootstrapNotes handles the initial note loading and hash-specified page creation to keep App-side effects simple.
  *
- * @param params defaultPageやストレージAPIなどブート処理に必要な依存をまとめたオブジェクト
+ * @param params Object containing dependencies required for bootstrapping (defaultPage, storage APIs, etc.)
  * @returns void
  */
 export function useBootstrapNotes(params: UseBootstrapNotesParams) {

@@ -19,10 +19,10 @@ type BootstrapNotesParams = {
 };
 
 /**
- * 初期ロード時にノート一覧を取得し、ルーティングを決定・必要ならノートを作成するユースケース。
+ * Loads notes during the initial boot, determines routing, and creates notes when required.
  *
- * @param params ストレージアクセスとUI更新に必要な依存
- * @returns 処理完了を待つPromise
+ * @param params Dependencies needed for storage access and UI updates
+ * @returns Promise that resolves once initialization is done
  */
 export async function bootstrapNotes({
   defaultPage,

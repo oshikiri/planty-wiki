@@ -20,10 +20,10 @@ export type UseSelectPathHandlerParams = {
 };
 
 /**
- * useSelectPathHandlerはノート選択と必要に応じた新規作成を行うコールバックを返し、App側のハンドラを整理する。
+ * Provides a callback that selects a note (and creates it if needed) to keep the App handler lean.
  *
- * @param params defaultPageやストレージ依存など選択処理に必要な値
- * @returns パスを受け取り選択・作成を行うコールバック
+ * @param params Values required for selection such as defaultPage and storage dependencies
+ * @returns Callback that accepts a path and performs selection/creation
  */
 export function useSelectPathHandler({
   defaultPage,

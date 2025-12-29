@@ -3,9 +3,9 @@ import type { Note, SearchResult } from "../types/note";
 import { callWorker } from "./sqlite-worker-client";
 
 /**
- * OPFS上のSQLiteワーカーと通信するNoteStorage実装を生成する。
+ * Creates a NoteStorage implementation that talks to the SQLite worker on OPFS.
  *
- * @returns SQLiteバックエンドで動作するNoteStorage
+ * @returns NoteStorage backed by SQLite
  */
 export function createSqliteStorage(): NoteStorage {
   return {

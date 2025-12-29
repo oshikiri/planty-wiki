@@ -17,10 +17,10 @@ type HashRouteGuardParams = {
 };
 
 /**
- * hashchange発火時にルートを確認し、必要ならノート作成や遷移を行うユースケース。
+ * Handles hashchange events by checking the route and creating or routing to the note when necessary.
  *
- * @param params ノート参照や保存関数など
- * @returns 処理完了を待つPromise
+ * @param params Dependencies such as note references and save functions
+ * @returns Promise that resolves when processing completes
  */
 export async function handleHashRouteChange({
   deriveTitle,

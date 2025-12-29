@@ -14,16 +14,16 @@ type EditorProps = {
 };
 
 /**
- * ノート1件分の編集UIとバックリンク表示をまとめて描画する。
+ * Renders the editing UI for a single note together with backlinks.
  *
- * @param props.note 表示・編集対象のノート
- * @param props.noteRevision ノート差し替え時にLexicalエディタへ伝えるリビジョン番号
- * @param props.onChangeDraft エディタ変更時に呼び出されるMarkdown更新ハンドラ
- * @param props.statusMessage 画面下部に表示する最新ステータスメッセージ
- * @param props.isDirty ローカルのドラフトが未保存かどうか
- * @param props.backlinks 現在のノートを参照しているページ一覧
- * @param props.onSelectPath バックリンクから別ノートを開く際に使う選択ハンドラ
- * @returns エディタと付随情報を含むJSX
+ * @param props.note The note being displayed and edited
+ * @param props.noteRevision Revision counter propagated to Lexical on note replacement
+ * @param props.onChangeDraft Handler fired when the editor content changes
+ * @param props.statusMessage Latest status message shown below the editor
+ * @param props.isDirty Whether the local draft has unsaved changes
+ * @param props.backlinks List of pages that reference the current note
+ * @param props.onSelectPath Navigation handler invoked from backlinks
+ * @returns JSX containing the editor and related elements
  */
 export function Editor(props: EditorProps) {
   return (
@@ -35,7 +35,7 @@ export function Editor(props: EditorProps) {
       />
       <article class={styles.editorBody}>
         <PlantyEditor
-          // autosaveではキーを変えないようにして、意図しないキャレット位置のリセットを防ぐ
+          // Keep the key stable during autosave to avoid resetting the caret position.
           noteKey={`${props.note.path}:${props.noteRevision}`}
           initialMarkdown={props.note.body}
           onMarkdownChange={props.onChangeDraft}

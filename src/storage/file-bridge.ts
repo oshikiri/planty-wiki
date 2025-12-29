@@ -20,10 +20,10 @@ export type ExportNotesResult =
   | { status: "failed" };
 
 /**
- * ユーザー指定ディレクトリからMarkdownを読み込み、ノートストレージへ一括反映する。
+ * Reads Markdown files from a user-selected directory and applies them to the note storage.
  *
- * @param repository NoteRepositoryの実装
- * @returns ストレージへ反映した結果
+ * @param repository Implementation of NoteRepository
+ * @returns Result of the import operation
  */
 export async function importMarkdownFromDirectory(
   repository: NoteRepository,
@@ -57,10 +57,10 @@ export async function importMarkdownFromDirectory(
 }
 
 /**
- * 指定ノート一覧をユーザーが選んだディレクトリへMarkdownとして書き出す。
+ * Writes the provided notes to a directory chosen by the user as Markdown files.
  *
- * @param notes エクスポート対象ノートの配列
- * @returns エクスポート処理の結果
+ * @param notes Array of notes to export
+ * @returns Result of the export operation
  */
 export async function exportNotesToDirectory(notes: Note[]): Promise<ExportNotesResult> {
   if (!notes.length) {
@@ -89,7 +89,7 @@ function createNoteFromMarkdownPath(relativePath: string, body: string): Note {
     .join("/");
   const notePath = normalizePath(`/pages/${normalizedPath}`);
   const baseName = normalizedPath.split("/").filter(Boolean).slice(-1)[0] ?? "untitled";
-  // ページタイトルは常にファイル名由来に統一し、本文内の見出しには依存しない
+  // Always derive the page title from the file name and never rely on headings inside the body.
   return {
     path: notePath,
     title: baseName,

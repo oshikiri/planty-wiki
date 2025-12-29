@@ -29,13 +29,13 @@ type PlantyEditorProps = {
 };
 
 /**
- * Lexicalベースのエディタを初期化し、Planty Wiki特有のプラグインやプレースホルダーを組み合わせたUIを提供する。
+ * Initializes the Lexical-based editor and wires up Planty Wiki specific plugins and placeholder.
  *
- * @param props.noteKey ノート切り替え検知に使う安定したキー
- * @param props.initialMarkdown 初期Markdown本文
- * @param props.onMarkdownChange エディタ内容が変化したときの通知コールバック
- * @param props.onWikiLinkClick Wikiリンクをクリックしたときに遷移させるハンドラ
- * @returns LexicalエディタのコンテナJSX
+ * @param props.noteKey Stable key used to detect note switching
+ * @param props.initialMarkdown Initial Markdown body
+ * @param props.onMarkdownChange Callback invoked when the editor content changes
+ * @param props.onWikiLinkClick Handler triggered when a wiki link is clicked
+ * @returns JSX container for the Lexical editor
  */
 export function PlantyEditor({
   noteKey,

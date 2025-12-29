@@ -21,10 +21,10 @@ type QueryResultProps = {
 };
 
 /**
- * QueryPageはSQLクエリの実行フォームと結果テーブルを描画する。
+ * Renders the SQL query form and the result table.
  *
- * @param props.runQuery SQLクエリを実行する非同期関数
- * @returns クエリ実行ページのJSX
+ * @param props.runQuery Async function that executes SQL queries
+ * @returns JSX for the query execution page
  */
 export function QueryPage({ runQuery }: QueryPageProps) {
   const [query, setQuery] = useState("SELECT path, title FROM pages LIMIT 10");

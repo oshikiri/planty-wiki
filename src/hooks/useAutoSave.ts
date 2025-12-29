@@ -12,10 +12,10 @@ type UseAutoSaveParams = {
 };
 
 /**
- * useAutoSaveは、pendingSaveまたはretrySnapshotを監視し、800ms後にsanitize→UIアップデート→保存を順に実行する。
- * 保存が失敗した場合はretry専用stateへ差分を残し、次のeffectサイクルで同じ処理を再試行する。
+ * Observes pendingSave/retrySnapshot and runs sanitize → UI update → persistence after 800 ms.
+ * Failed saves are captured in a retry state so the next effect cycle can reattempt the same work.
  *
- * @param params pendingSaveやストレージ保存関数など自動保存に必要な依存関係
+ * @param params Dependencies required for auto-save such as pendingSave and saveNote
  * @returns void
  */
 export function useAutoSave({
@@ -26,7 +26,7 @@ export function useAutoSave({
   saveNote,
   setStatusMessage,
 }: UseAutoSaveParams) {
-  // pendingSaveと独立したretrySnapshotで保存失敗分を保持し、ストレージ復旧後に再実行できるようにする
+  // Keep failed saves in retrySnapshot, independent from pendingSave, so they can be retried once storage recovers.
   const [retrySnapshot, setRetrySnapshot] = useState<PendingSave | null>(null);
 
   useEffect(() => {
@@ -52,7 +52,7 @@ export function useAutoSave({
 }
 
 /**
- * 自動保存ループを構築する内部パラメータ群。useEffectを細分化して責務を明確にするために導入した。
+ * Internal parameters that shape the auto-save loop; introduced to clarify responsibilities inside useEffect.
  */
 type ScheduleParams = {
   snapshot: PendingSave | null;
@@ -66,7 +66,7 @@ type ScheduleParams = {
 };
 
 /**
- * 800ms遅延の自動保存処理をスケジュールし、cleanupでtimeoutを破棄する。
+ * Schedules the 800 ms delayed auto-save and clears the timeout during cleanup.
  */
 function scheduleAutoSaveEffect(params: ScheduleParams) {
   const { snapshot } = params;
@@ -86,7 +86,7 @@ function scheduleAutoSaveEffect(params: ScheduleParams) {
 }
 
 /**
- * sanitize→UI更新→storage保存→成功/失敗ハンドリングまでを一連で実行する。
+ * Runs sanitize → UI update → storage persistence → success/failure handling as a single task.
  */
 type TaskParams = ScheduleParams & {
   snapshot: PendingSave;

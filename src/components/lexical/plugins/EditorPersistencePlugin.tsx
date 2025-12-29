@@ -13,12 +13,12 @@ type EditorPersistencePluginProps = {
 };
 
 /**
- * ノート切り替え時のMarkdown import/exportと履歴クリアを担い、autosave中の再レンダリングでキャレットが飛ばないようにする。
+ * Handles Markdown import/export and history clearing when notes switch while keeping the caret stable during autosave renders.
  *
- * @param props.noteKey Lexical側へ渡すノート識別キー
- * @param props.initialMarkdown 読み込む初期Markdown
- * @param props.onMarkdownChange エディタ本文変更を親へ通知するコールバック
- * @returns null（プラグインとして副作用のみ行う）
+ * @param props.noteKey Note identifier passed to Lexical
+ * @param props.initialMarkdown Markdown to load initially
+ * @param props.onMarkdownChange Callback that notifies the parent about content changes
+ * @returns null because the plugin only performs side effects
  */
 export function EditorPersistencePlugin({
   noteKey,
@@ -31,14 +31,14 @@ export function EditorPersistencePlugin({
   useEffect(() => {
     const previousKey = previousNoteKeyRef.current;
     if (previousKey === noteKey) {
-      // 同じノートのautosaveだけの場合はキャレットが先頭へ飛ぶのを防ぐためimportをスキップする
+      // Skip re-import during autosave for the same note to keep the caret position intact.
       return;
     }
     previousNoteKeyRef.current = noteKey;
     editor.update(() => {
       $convertFromMarkdownString(initialMarkdown ?? "", BASIC_TRANSFORMERS);
     });
-    // ノート切り替えが起きたタイミングだけ履歴スタックをクリアし、Undo/Redoが他ノートへ漏れないようにする
+    // Clear the history stack only when the note changes so undo/redo does not leak across notes.
     if (previousKey !== null) {
       editor.dispatchCommand(CLEAR_HISTORY_COMMAND, undefined);
     }

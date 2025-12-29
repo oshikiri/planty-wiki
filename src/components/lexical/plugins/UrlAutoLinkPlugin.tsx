@@ -4,9 +4,9 @@ import { createLinkMatcherWithRegExp } from "@lexical/link";
 const HTTP_URL_MATCHER = createLinkMatcherWithRegExp(/\bhttps?:\/\/[^\s<>"'`[\]{}|\\^]+/i);
 
 /**
- * http/httpsで始まるURL文字列を自動的にリンク化してクリックできるようにするLexicalプラグイン。
+ * Lexical plugin that automatically converts URLs starting with http/https into clickable links.
  *
- * @returns HTTP(S)リンク検出用AutoLinkプラグイン
+ * @returns AutoLink plugin configured for HTTP(S) detection
  */
 export function UrlAutoLinkPlugin() {
   return <AutoLinkPlugin matchers={[HTTP_URL_MATCHER]} />;

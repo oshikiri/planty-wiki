@@ -7,9 +7,9 @@ export type Router = {
 };
 
 /**
- * window.location.hashベースのルーターを構築し、UIから直接locationへ触れないようにする。
+ * Builds a router backed by window.location.hash so the UI never manipulates location directly.
  *
- * @returns hashchangeを監視するRouter
+ * @returns Router that listens to hashchange events
  */
 export function createHashRouter(): Router {
   const getCurrentRoute = () => parseHashLocation(window.location.hash);

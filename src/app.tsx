@@ -32,10 +32,10 @@ type AppProps = {
 };
 
 /**
- * Planty Wiki全体を束ねるルートコンポーネントを描画する。
+ * Renders the root component that orchestrates the entire Planty Wiki application.
  *
- * @param props 依存関係としてのNoteServiceとQueryService
- * @returns ルートアプリケーションのJSX
+ * @param props Injected NoteService, QueryService, and Router dependencies
+ * @returns Root application JSX
  */
 export function App({ noteService, queryService, router }: AppProps) {
   const [notes, setNotes] = useState<Note[]>([]);
@@ -90,7 +90,7 @@ export function App({ noteService, queryService, router }: AppProps) {
     if (!currentNote) {
       return;
     }
-    // ノート切り替えや初回ロード時に保存済み本文へ同期して、空文字との差分で誤ってisDirty扱いにならないようにする
+    // Sync to the saved body on note switch or initial load so an empty string does not accidentally set isDirty.
     setDraftBody(currentNote.body);
   }, [currentNote]);
   useEffect(() => {
@@ -299,10 +299,10 @@ export function App({ noteService, queryService, router }: AppProps) {
 }
 
 /**
- * ストレージ初期化失敗時にエラーメッセージを描画する。
+ * Renders an error message when persistent storage initialization fails.
  *
- * @param props ブラウザ環境から受け取った例外メッセージ
- * @returns エラー表示用のUI
+ * @param props Error message received from the browser environment
+ * @returns UI that displays the initialization error
  */
 export function StorageInitError({ message }: { message?: string | null }) {
   return (

@@ -17,9 +17,9 @@ type UseHashRouteGuardParams = {
 };
 
 /**
- * useHashRouteGuardはhashchangeイベントを監視し、指定パスが存在しなければ作成して遷移させる。
+ * Observes hashchange events, creating the requested note when missing before routing to it.
  *
- * @param params ノート配列refや保存関数などハッシュ監視に必要な依存
+ * @param params Dependencies required for hash monitoring such as note refs and save functions
  * @returns void
  */
 export function useHashRouteGuard({

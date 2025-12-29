@@ -9,9 +9,9 @@ import {
 } from "lexical";
 
 /**
- * Emacs風のCtrl+A/EショートカットをLexicalエディタへ追加するプラグイン。
+ * Adds Emacs-style Ctrl+A/E shortcuts to the Lexical editor.
  *
- * @returns null（Lexicalのコマンド登録のみ行う）
+ * @returns null because it only registers Lexical commands
  */
 export function CtrlKeyBindingsPlugin() {
   const [editor] = useLexicalComposerContext();
@@ -46,7 +46,7 @@ export function CtrlKeyBindingsPlugin() {
 
 type CtrlKeyHandler = (selection: RangeSelection, event: KeyboardEvent) => void;
 
-// Ctrl系ショートカットはここへ追加して集中管理する
+// Add additional Ctrl-based shortcuts here to keep them centralized.
 const ctrlKeyBindings: Record<string, CtrlKeyHandler> = {
   a: (selection, event) => moveSelectionAlongLineBoundary(selection, event, true),
   e: (selection, event) => moveSelectionAlongLineBoundary(selection, event, false),

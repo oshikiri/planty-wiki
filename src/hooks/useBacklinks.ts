@@ -11,12 +11,12 @@ export type Backlink = {
 };
 
 /**
- * 現在ノートを参照しているページの一覧を取得する。可能ならストレージのインデックスに委譲し、失敗時はローカル走査へフォールバックする。
+ * Retrieves pages that reference the current note, delegating to the storage index when available and falling back to a local scan otherwise.
  *
- * @param notes クライアントが保持するノート一覧
- * @param current 編集中のノート
- * @param noteService バックリンクAPIを提供するNoteService（未指定ならローカル走査のみ）
- * @returns Backlinkオブジェクトの配列
+ * @param notes List of notes held on the client
+ * @param current Note currently being edited
+ * @param noteService NoteService that exposes backlink APIs (optional)
+ * @returns Array of Backlink objects
  */
 export function useBacklinks(notes: Note[], current: Note, noteService?: NoteService): Backlink[] {
   const targetPath = current.path;

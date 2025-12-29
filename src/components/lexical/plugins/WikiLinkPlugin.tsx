@@ -31,10 +31,10 @@ function registerWikiLinkEntity(editor: LexicalEditor): () => void {
 }
 
 /**
- * `[[Page]]`表記をWikiLinkノードへ差し替え、クリック時にノート遷移する挙動を追加するLexicalプラグイン。
+ * Lexical plugin that converts `[[Page]]` syntax into WikiLink nodes and routes to the note when clicked.
  *
- * @param props.onWikiLinkClick Wikiリンクが押された際に呼び出される遷移ハンドラ
- * @returns null（Lexicalのプラグインとして副作用のみ行う）
+ * @param props.onWikiLinkClick Navigation handler invoked when a wiki link is clicked
+ * @returns null because the plugin performs only side effects
  */
 export function WikiLinkPlugin({ onWikiLinkClick }: WikiLinkPluginProps) {
   const [editor] = useLexicalComposerContext();

@@ -4,7 +4,7 @@ import { createStorage, type NoteStorage } from "../storage";
 import type { SearchResult } from "../types/note";
 
 /**
- * OpfsNoteRepositoryはOPFS + SQLiteストレージへ委譲するNoteRepository実装である。
+ * OpfsNoteRepository is a NoteRepository implementation that delegates to the OPFS + SQLite storage.
  */
 export class OpfsNoteRepository implements NoteRepository {
   constructor(private readonly storage: NoteStorage) {}

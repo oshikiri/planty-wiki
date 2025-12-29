@@ -10,10 +10,10 @@ type StatusLogEntry = {
 const STATUS_LOG_KEY = "__plantyStatusLog";
 
 /**
- * useStatusMessageはUI表示用のstatusMessageを管理しつつ、履歴をconsoleから参照できるよう記録する。
+ * Manages the UI-facing status message while keeping a history accessible via the console.
  *
- * @param initial 初期表示メッセージ
- * @returns [現在のメッセージ, 更新関数]
+ * @param initial Initial message shown on mount
+ * @returns [current message, update function]
  */
 export function useStatusMessage(initial = ""): [string, SetStatusMessage] {
   const [statusMessage, setStatusMessageState] = useState(initial);

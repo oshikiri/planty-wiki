@@ -23,10 +23,10 @@ export type UseDeleteNoteParams = {
 };
 
 /**
- * useDeleteNoteは削除待ちのノートを安全に消し、必要ならデフォルトノートを生成するコールバックを返す。
+ * Provides a callback that safely deletes the pending note and creates the default note if needed.
  *
- * @param params 削除処理に必要なノート配列や状態更新関数
- * @returns 削除確定時に呼ぶasyncハンドラ
+ * @param params Note arrays and state setters required for deletion
+ * @returns Async handler invoked when the deletion is confirmed
  */
 export function useDeleteNote({
   defaultPage,

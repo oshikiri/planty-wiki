@@ -12,10 +12,10 @@ type NumberRef = { current: number };
 type TimeoutRef = { current: number | null };
 
 /**
- * useNoteSearchはクライアント/ストレージ検索をデバウンスしながら実行し、クエリと結果とハンドラを返す。
+ * Debounces client/service note searches while returning the query, latest results, and handler.
  *
- * @param params notes配列とsearchNotesをまとめた引数
- * @returns クエリ文字列・検索結果・検索ハンドラ
+ * @param params Object that bundles the notes array and optional searchNotes function
+ * @returns Query string, results, and the search handler
  */
 export function useNoteSearch({ searchNotes, notes }: UseNoteSearchArgs) {
   const [query, setQuery] = useState("");

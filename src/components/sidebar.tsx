@@ -24,18 +24,18 @@ type ContextMenuState = {
 };
 
 /**
- * ノート一覧やインポート/エクスポート操作をまとめたサイドバーを描画する。
+ * Renders the sidebar that combines the note list with import/export actions.
  *
- * @param props.notes 一覧表示するノートコレクション
- * @param props.selectedPath 現在開いているノートパス
- * @param props.onSelectPath ノート項目をクリックした際の遷移ハンドラ
- * @param props.onImportMarkdown ディレクトリインポート実行コールバック
- * @param props.onExportMarkdown ディレクトリエクスポート実行コールバック
- * @param props.onDeleteNote ノート削除処理を依頼するハンドラ
- * @param props.pendingDeletePath 削除保留中のノートパス（なければnull/undefined）
- * @param props.onCancelDelete Undoバーから削除を取り消すコールバック
- * @param props.onConfirmDelete Undoバーから削除を実行するコールバック
- * @returns サイドバーUIのJSX
+ * @param props.notes Collection of notes to display
+ * @param props.selectedPath Currently opened note path
+ * @param props.onSelectPath Handler invoked when a note item is clicked
+ * @param props.onImportMarkdown Callback to trigger directory import
+ * @param props.onExportMarkdown Callback to trigger directory export
+ * @param props.onDeleteNote Handler that requests note deletion
+ * @param props.pendingDeletePath Path of the note awaiting deletion confirmation (if any)
+ * @param props.onCancelDelete Callback invoked when undoing the pending deletion
+ * @param props.onConfirmDelete Callback invoked when confirming the pending deletion
+ * @returns JSX for the sidebar UI
  */
 export function Sidebar(props: SidebarProps) {
   const contextMenu = useSidebarContextMenu(props.onSelectPath, props.onDeleteNote);

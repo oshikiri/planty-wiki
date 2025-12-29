@@ -50,10 +50,10 @@ export class WikiLinkNode extends TextNode {
 }
 
 /**
- * テキストノードをWikiLinkNodeへ置き換え、`[[Page]]`表記として扱えるようにする。
+ * Replaces the current text node with a WikiLinkNode so it can represent `[[Page]]` syntax.
  *
- * @param text ノードへ設定するテキスト
- * @returns 挿入されたWikiLinkNode
+ * @param text Text assigned to the node
+ * @returns The inserted WikiLinkNode
  */
 export function $createWikiLinkNode(text: string): WikiLinkNode {
   return $applyNodeReplacement(new WikiLinkNode(text));

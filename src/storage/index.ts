@@ -11,9 +11,9 @@ export interface NoteStorage {
 }
 
 /**
- * OPFS + SQLite (worker経由)のストレージを初期化し、利用できない場合はエラーで停止する。
+ * Initializes the OPFS + SQLite (worker-based) storage and throws if the environment cannot support it.
  *
- * @returns OPFS SQLite実装のNoteStorage
+ * @returns NoteStorage backed by OPFS SQLite
  */
 export function createStorage(): NoteStorage {
   const hasNavigator = typeof navigator !== "undefined";

@@ -21,10 +21,10 @@ type SelectOrCreateNoteParams = {
 };
 
 /**
- * 指定パスを正規化し、既存ノートを選択するか新規作成まで含めて遷移させるユースケース。
+ * Normalizes the given path and performs selection or creation before routing to the note.
  *
- * @param params ノート一覧や保存関数など遷移に必要な依存
- * @returns 処理完了を待つPromise
+ * @param params Dependencies required for the transition such as note lists and save functions
+ * @returns Promise that resolves when the flow completes
  */
 export async function selectOrCreateNote({
   path,

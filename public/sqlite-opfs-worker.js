@@ -17,7 +17,7 @@ self.onmessage = async function (event) {
   }
 
   if (isRequestCancelled(id)) {
-    // すでにメインスレッドでタイムアウト扱いになったリクエストはDB処理を開始しない
+    // Skip DB work for requests that already timed out on the main thread.
     consumeCancelledRequest(id);
     return;
   }
@@ -248,7 +248,7 @@ function sanitizeNoteForImport(note, fallbackUpdatedAt, index) {
   const title = extractAndValidateText(record.title, 1024);
   const body = extractAndValidateText(record.body, 50000, { allowEmpty: true });
   if (!path || !title || body == null) {
-    // インポート中に破損データへ遭遇したことをわかりやすくするため、index付きで失敗させる
+    // Include the index in the error so corrupted data is easy to identify during import.
     throw new Error(`Invalid note payload during import (index ${index})`);
   }
   const updatedAt =
@@ -634,6 +634,6 @@ function postIfNotCancelled(id, message) {
   if (consumeCancelledRequest(id)) {
     return;
   }
-  // タイムアウト後にpostMessageするとUIが捨てたリクエストを再びresolveしてしまうため、ここで握りつぶす
+  // Suppress messages for timed-out requests so the UI does not resolve something it already discarded.
   self.postMessage(message);
 }
