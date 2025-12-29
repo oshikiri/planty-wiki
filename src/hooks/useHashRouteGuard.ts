@@ -1,7 +1,8 @@
 import { useEffect, type Dispatch, type MutableRef, type StateUpdater } from "preact/hooks";
 
 import type { Note } from "../types/note";
-import { parseHashLocation, type Route } from "../navigation/route";
+import type { Route } from "../navigation/route";
+import type { Router } from "../navigation/router";
 
 type UseHashRouteGuardParams = {
   deriveTitle: (path: string) => string;
@@ -11,6 +12,7 @@ type UseHashRouteGuardParams = {
   setStatusMessage: Dispatch<StateUpdater<string>>;
   saveNote: (note: Note) => Promise<void>;
   notesRef: MutableRef<Note[]>;
+  router: Router;
 };
 
 /**
@@ -27,10 +29,11 @@ export function useHashRouteGuard({
   setStatusMessage,
   saveNote,
   notesRef,
+  router,
 }: UseHashRouteGuardParams) {
   useEffect(() => {
     const handleHashChange = async () => {
-      const routeFromHash = parseHashLocation(window.location.hash);
+      const routeFromHash = router.getCurrentRoute();
       const latestNotes = notesRef.current;
       if (!routeFromHash) {
         return;
@@ -58,10 +61,27 @@ export function useHashRouteGuard({
       setRoute(routeFromHash);
     };
 
-    window.addEventListener("hashchange", handleHashChange);
+    handleHashChange().catch((error) => {
+      console.error("Failed to handle initial hash route", error);
+    });
+
+    const unsubscribe = router.subscribe(() => {
+      handleHashChange().catch((error) => {
+        console.error("Failed to handle hash route change", error);
+      });
+    });
 
     return () => {
-      window.removeEventListener("hashchange", handleHashChange);
+      unsubscribe();
     };
-  }, [deriveTitle, notesRef, sanitizeNoteForSave, setNotes, setRoute, setStatusMessage, saveNote]);
+  }, [
+    deriveTitle,
+    notesRef,
+    router,
+    sanitizeNoteForSave,
+    setNotes,
+    setRoute,
+    setStatusMessage,
+    saveNote,
+  ]);
 }

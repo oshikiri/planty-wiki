@@ -1,6 +1,7 @@
 import { useCallback, type Dispatch, type StateUpdater } from "preact/hooks";
 
-import { formatHashLocation, type Route } from "../navigation/route";
+import type { Route } from "../navigation/route";
+import type { Router } from "../navigation/router";
 import type { Note, PendingSave } from "../types/note";
 import type { NoteService } from "../services/note-service";
 
@@ -17,6 +18,7 @@ export type UseDeleteNoteParams = {
   setRoute: Dispatch<StateUpdater<Route>>;
   setStatusMessage: Dispatch<StateUpdater<string>>;
   noteService: NoteService;
+  router: Router;
 };
 
 /**
@@ -38,6 +40,7 @@ export function useDeleteNote({
   setRoute,
   setStatusMessage,
   noteService,
+  router,
 }: UseDeleteNoteParams) {
   return useCallback(async () => {
     if (!pendingDeletionPath) return;
@@ -66,14 +69,16 @@ export function useDeleteNote({
       setRoute,
       setStatusMessage,
       noteService,
+      router,
     });
     if (handledEmpty) {
       return;
     }
     const nextPath = selectNextPathAfterDelete(previousNotes, remaining, path, selectedNotePath);
     if (!nextPath) return;
-    setRoute({ type: "note", path: nextPath });
-    window.location.hash = formatHashLocation({ type: "note", path: nextPath });
+    const nextRoute: Route = { type: "note", path: nextPath };
+    setRoute(nextRoute);
+    router.navigate(nextRoute);
   }, [
     defaultPage,
     deriveTitle,
@@ -87,6 +92,7 @@ export function useDeleteNote({
     setRoute,
     setStatusMessage,
     noteService,
+    router,
   ]);
 }
 
@@ -150,6 +156,7 @@ type HandleEmptyAfterDeleteParams = {
   setRoute: Dispatch<StateUpdater<Route>>;
   setStatusMessage: Dispatch<StateUpdater<string>>;
   noteService: NoteService;
+  router: Router;
 };
 
 async function handleEmptyAfterDelete({
@@ -161,6 +168,7 @@ async function handleEmptyAfterDelete({
   setRoute,
   setStatusMessage,
   noteService,
+  router,
 }: HandleEmptyAfterDeleteParams) {
   if (remaining.length) {
     return false;
@@ -178,7 +186,8 @@ async function handleEmptyAfterDelete({
     console.error("Failed to recreate default note after deletion", error);
     setStatusMessage("Failed to recreate default note");
   }
-  setRoute({ type: "note", path: fallbackNote.path });
-  window.location.hash = formatHashLocation({ type: "note", path: fallbackNote.path });
+  const fallbackRoute: Route = { type: "note", path: fallbackNote.path };
+  setRoute(fallbackRoute);
+  router.navigate(fallbackRoute);
   return true;
 }

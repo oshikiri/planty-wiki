@@ -5,10 +5,11 @@ import { QueryPage } from "./components/query-page";
 import { Sidebar } from "./components/sidebar";
 import { SearchSidebar } from "./components/search-sidebar";
 import { DEFAULT_PAGE_PATH } from "./navigation/constants";
-import { formatHashLocation, QUERY_ROUTE, type Route } from "./navigation/route";
+import { QUERY_ROUTE, type Route } from "./navigation/route";
 import type { Note, PendingSave } from "./types/note";
 import type { NoteService } from "./services/note-service";
 import type { QueryService } from "./services/query-service";
+import type { Router } from "./navigation/router";
 import { buildNote, deriveTitleFromPath } from "./domain/note";
 
 import { useBacklinks } from "./hooks/useBacklinks";
@@ -27,6 +28,7 @@ const EMPTY_NOTE: Note = { path: "", title: "", body: "" };
 type AppProps = {
   noteService: NoteService;
   queryService: QueryService;
+  router: Router;
 };
 
 /**
@@ -35,10 +37,12 @@ type AppProps = {
  * @param props 依存関係としてのNoteServiceとQueryService
  * @returns ルートアプリケーションのJSX
  */
-export function App({ noteService, queryService }: AppProps) {
+export function App({ noteService, queryService, router }: AppProps) {
   const [notes, setNotes] = useState<Note[]>([]);
   const [noteRevision, setNoteRevision] = useState(0);
-  const [route, setRoute] = useState<Route>({ type: "note", path: DEFAULT_PAGE_PATH });
+  const [route, setRoute] = useState<Route>(
+    () => router.getCurrentRoute() ?? { type: "note", path: DEFAULT_PAGE_PATH },
+  );
   const selectedNotePath = route.type === "note" ? route.path : null;
   const [pendingDeletionPath, setPendingDeletionPath] = useState<string | null>(null);
   const notesRef = useRef<Note[]>([]);
@@ -123,6 +127,7 @@ export function App({ noteService, queryService }: AppProps) {
     setRoute,
     setStatusMessage,
     noteService,
+    router,
   });
 
   const handleSelectPath = useSelectPathHandler({
@@ -135,6 +140,7 @@ export function App({ noteService, queryService }: AppProps) {
     setRoute,
     setStatusMessage,
     noteService,
+    router,
   });
 
   const isDirty = currentNote ? draftBody !== currentNote.body : false;
@@ -173,6 +179,7 @@ export function App({ noteService, queryService }: AppProps) {
     setRoute,
     setStatusMessage,
     saveNote: noteService.saveNote,
+    router,
   });
 
   const handleImportMarkdown = useCallback(() => {
@@ -225,8 +232,8 @@ export function App({ noteService, queryService }: AppProps) {
   }, [noteService, notes, showTemporaryStatus]);
   const handleOpenQuery = useCallback(() => {
     setRoute(QUERY_ROUTE);
-    window.location.hash = formatHashLocation(QUERY_ROUTE);
-  }, [setRoute]);
+    router.navigate(QUERY_ROUTE);
+  }, [router, setRoute]);
 
   const handleDeleteNote = useDeleteNote({
     defaultPage: DEFAULT_PAGE_PATH,
@@ -241,6 +248,7 @@ export function App({ noteService, queryService }: AppProps) {
     setRoute,
     setStatusMessage,
     noteService,
+    router,
   });
 
   const handleRequestDelete = useCallback((path: string) => {

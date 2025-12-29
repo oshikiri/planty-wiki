@@ -2,7 +2,8 @@ import { useEffect, type Dispatch, type StateUpdater } from "preact/hooks";
 
 import type { Note } from "../types/note";
 import type { NoteService } from "../services/note-service";
-import { parseHashLocation, type Route } from "../navigation/route";
+import type { Router } from "../navigation/router";
+import type { Route } from "../navigation/route";
 
 type SetNotesFromStorage = (next: Note[]) => void;
 
@@ -15,6 +16,7 @@ export type UseBootstrapNotesParams = {
   setRoute: Dispatch<StateUpdater<Route>>;
   setStatusMessage: Dispatch<StateUpdater<string>>;
   noteService: NoteService;
+  router: Router;
 };
 
 /**
@@ -33,6 +35,7 @@ export function useBootstrapNotes(params: UseBootstrapNotesParams) {
     setRoute,
     setStatusMessage,
     noteService,
+    router,
   } = params;
   useEffect(() => {
     let isMounted = true;
@@ -41,7 +44,7 @@ export function useBootstrapNotes(params: UseBootstrapNotesParams) {
         const loaded = await noteService.loadNotes();
         if (!isMounted) return;
         setNotesFromStorage(loaded);
-        const routeFromHash = parseHashLocation(window.location.hash);
+        const routeFromHash = router.getCurrentRoute();
         if (routeFromHash?.type === "query") {
           if (isMounted) {
             setRoute(routeFromHash);
@@ -66,7 +69,9 @@ export function useBootstrapNotes(params: UseBootstrapNotesParams) {
         }
         if (loaded[0]) {
           if (isMounted) {
-            setRoute({ type: "note", path: loaded[0].path });
+            const nextRoute: Route = { type: "note", path: loaded[0].path };
+            setRoute(nextRoute);
+            router.navigate(nextRoute);
           }
           return;
         }
@@ -79,14 +84,18 @@ export function useBootstrapNotes(params: UseBootstrapNotesParams) {
             noteService,
             setStatusMessage,
           });
-          setRoute({ type: "note", path: defaultPage });
+          const defaultRoute: Route = { type: "note", path: defaultPage };
+          setRoute(defaultRoute);
+          router.navigate(defaultRoute);
         }
       } catch (error) {
         console.error("Failed to bootstrap notes from storage", error);
         if (!isMounted) return;
         setStatusMessage("Failed to load notes, starting from an empty state");
         setNotesFromStorage([]);
-        setRoute({ type: "note", path: defaultPage });
+        const fallbackRoute: Route = { type: "note", path: defaultPage };
+        setRoute(fallbackRoute);
+        router.navigate(fallbackRoute);
       }
     }
     bootstrap();
@@ -102,6 +111,7 @@ export function useBootstrapNotes(params: UseBootstrapNotesParams) {
     setRoute,
     setStatusMessage,
     noteService,
+    router,
   ]);
 }
 

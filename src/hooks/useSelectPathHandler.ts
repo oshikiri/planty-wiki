@@ -1,9 +1,10 @@
 import { useCallback, type Dispatch, type StateUpdater } from "preact/hooks";
 
 import { normalizePath } from "../navigation";
-import { formatHashLocation, type Route } from "../navigation/route";
+import type { Route } from "../navigation/route";
 import type { Note } from "../types/note";
 import type { NoteService } from "../services/note-service";
+import type { Router } from "../navigation/router";
 
 export type UseSelectPathHandlerParams = {
   defaultPage: string;
@@ -15,6 +16,7 @@ export type UseSelectPathHandlerParams = {
   setRoute: Dispatch<StateUpdater<Route>>;
   setStatusMessage: Dispatch<StateUpdater<string>>;
   noteService: NoteService;
+  router: Router;
 };
 
 /**
@@ -33,6 +35,7 @@ export function useSelectPathHandler({
   setRoute,
   setStatusMessage,
   noteService,
+  router,
 }: UseSelectPathHandlerParams) {
   return useCallback(
     (path: string) => {
@@ -52,9 +55,10 @@ export function useSelectPathHandler({
           }
           nextBody = newNote.body;
         }
-        setRoute({ type: "note", path: normalized });
+        const nextRoute: Route = { type: "note", path: normalized };
+        setRoute(nextRoute);
         setDraftBody(nextBody);
-        window.location.hash = formatHashLocation({ type: "note", path: normalized });
+        router.navigate(nextRoute);
       };
       run().catch((error) => {
         console.error("Unhandled error during handleSelectPath", error);
@@ -71,6 +75,7 @@ export function useSelectPathHandler({
       setRoute,
       setStatusMessage,
       noteService,
+      router,
     ],
   );
 }
