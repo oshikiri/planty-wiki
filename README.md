@@ -28,5 +28,5 @@ sqlite3 WebAssembly & JavaScript Documentation Index https://sqlite.org/wasm/doc
 
 ```sh
 git ls-files -- 'public/sqlite-opfs-worker.js' '*.ts' '*.tsx' ':!'*.test.ts |\
-  xargs wc --lines
+  xargs cloc
 ```
