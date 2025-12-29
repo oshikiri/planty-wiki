@@ -11,6 +11,7 @@ export type UseDeleteNoteParams = {
   deriveTitle: (path: string) => string;
   notes: Note[];
   pendingDeletionPath: string | null;
+  pendingSave: PendingSave | null;
   sanitizeNoteForSave: (note: Note) => Note;
   selectedNotePath: string | null;
   setNotes: Dispatch<StateUpdater<Note[]>>;
@@ -33,6 +34,7 @@ export function useDeleteNote({
   deriveTitle,
   notes,
   pendingDeletionPath,
+  pendingSave,
   sanitizeNoteForSave,
   selectedNotePath,
   setNotes,
@@ -49,21 +51,32 @@ export function useDeleteNote({
       deriveTitle,
       notes,
       pendingDeletionPath,
+      pendingSave,
       sanitizeNoteForSave,
       selectedNotePath,
       setNotes,
-      setPendingDeletionPath,
+      setPendingDeletionPath: (next) => setPendingDeletionPath(next),
       setPendingSave,
-      setRoute,
-      setStatusMessage,
-      noteService,
-      router,
+      setStatusMessage: (message) => setStatusMessage(message),
+      noteStorage: {
+        deleteNote: (path) => noteService.deleteNote(path),
+        saveNote: (note) => noteService.saveNote(note),
+        loadNotes: () => noteService.loadNotes(),
+      },
+      openNoteRoute: (targetPath) => {
+        const nextRoute: Route = { type: "note", path: targetPath };
+        setRoute(nextRoute);
+        router.navigate(nextRoute);
+      },
     });
   }, [
     defaultPage,
     deriveTitle,
     notes,
+    noteService,
     pendingDeletionPath,
+    pendingSave,
+    router,
     sanitizeNoteForSave,
     selectedNotePath,
     setNotes,
@@ -71,7 +84,5 @@ export function useDeleteNote({
     setPendingSave,
     setRoute,
     setStatusMessage,
-    noteService,
-    router,
   ]);
 }

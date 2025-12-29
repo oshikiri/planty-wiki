@@ -1,18 +1,16 @@
-import type { Dispatch, MutableRef, StateUpdater } from "preact/hooks";
-
-import type { Route } from "../navigation/route";
-import type { Router } from "../navigation/router";
-import type { Note } from "../types/note";
+import type { Note } from "../domain/note";
+import type { AppRoute } from "./ports";
+import type { StateSetter } from "./state";
 
 type HashRouteGuardParams = {
   deriveTitle: (path: string) => string;
   sanitizeNoteForSave: (note: Note) => Note;
-  setNotes: Dispatch<StateUpdater<Note[]>>;
-  setRoute: Dispatch<StateUpdater<Route>>;
-  setStatusMessage: Dispatch<StateUpdater<string>>;
+  setNotes: StateSetter<Note[]>;
+  applyRoute: (route: AppRoute) => void;
+  setStatusMessage: (message: string) => void;
   saveNote: (note: Note) => Promise<void>;
-  notesRef: MutableRef<Note[]>;
-  router: Router;
+  getNotesSnapshot: () => Note[];
+  getCurrentRoute: () => AppRoute | null;
   signal?: AbortSignal;
 };
 
@@ -26,20 +24,20 @@ export async function handleHashRouteChange({
   deriveTitle,
   sanitizeNoteForSave,
   setNotes,
-  setRoute,
+  applyRoute,
   setStatusMessage,
   saveNote,
-  notesRef,
-  router,
+  getNotesSnapshot,
+  getCurrentRoute,
   signal,
 }: HashRouteGuardParams): Promise<void> {
-  const routeFromHash = router.getCurrentRoute();
-  const latestNotes = notesRef.current;
+  const routeFromHash = getCurrentRoute();
+  const latestNotes = getNotesSnapshot();
   if (!routeFromHash || signal?.aborted) {
     return;
   }
-  if (routeFromHash.type === "query") {
-    setRoute(routeFromHash);
+  if (routeFromHash.kind === "query") {
+    applyRoute(routeFromHash);
     return;
   }
   if (!latestNotes.length) return;
@@ -60,6 +58,6 @@ export async function handleHashRouteChange({
     }
   }
   if (!signal?.aborted) {
-    setRoute(routeFromHash);
+    applyRoute(routeFromHash);
   }
 }

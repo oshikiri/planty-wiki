@@ -10,6 +10,11 @@
 ## Planty-Wiki
 - 詳細な仕様は docs/index.md に記載する
 
+### アーキテクチャ
+- 依存方向は `domain -> usecases -> hooks -> components -> app` とし、外側の層は内側へ依存しても良いが逆方向は禁止する
+  - `src/domain` 配下のモジュールは標準ライブラリか同じdomain配下にしか依存してはいけない。`navigation`/`hooks`/`components`/`services`/`storage` へのimportは禁止する
+  - `src/usecases` はdomainやインターフェース型にのみ依存し、`hooks` や UI（`components`/`navigation`）へ依存しないこと
+
 ### ドキュメントの管理
 - 実装計画やREADMEに記載したフェーズの完了状態と実装内容がずれた場合は、コード変更に合わせて計画ドキュメント側も更新すること
 - MarkdownエディタやWiki機能を実装するときはサポートしている記法をドキュメントに一覧化し仕様変更時に必ず更新するようにする。

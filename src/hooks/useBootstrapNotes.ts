@@ -5,6 +5,7 @@ import type { NoteService } from "../services/note-service";
 import type { Router } from "../navigation/router";
 import type { Route } from "../navigation/route";
 import { bootstrapNotes } from "../usecases/bootstrapNotes";
+import type { AppRoute, NoteStoragePort } from "../usecases/ports";
 
 type SetNotesFromStorage = (next: Note[]) => void;
 
@@ -46,10 +47,15 @@ export function useBootstrapNotes(params: UseBootstrapNotesParams) {
       sanitizeNoteForSave,
       setNotes,
       setNotesFromStorage,
-      setRoute,
+      applyRoute: (route) => setRoute(mapAppRouteToNavigation(route)),
+      navigateRoute: (route) => {
+        const nextRoute = mapAppRouteToNavigation(route);
+        setRoute(nextRoute);
+        router.navigate(nextRoute);
+      },
       setStatusMessage,
-      noteService,
-      router,
+      noteStorage: createNoteStoragePort(noteService),
+      getCurrentRoute: () => mapNavigationRouteToApp(router.getCurrentRoute()),
       signal: abortController.signal,
     }).catch((error) => {
       if (abortController.signal.aborted) {
@@ -72,4 +78,29 @@ export function useBootstrapNotes(params: UseBootstrapNotesParams) {
     noteService,
     router,
   ]);
+}
+
+function mapNavigationRouteToApp(route: Route | null): AppRoute | null {
+  if (!route) {
+    return null;
+  }
+  if (route.type === "query") {
+    return { kind: "query" };
+  }
+  return { kind: "note", path: route.path };
+}
+
+function mapAppRouteToNavigation(route: AppRoute): Route {
+  if (route.kind === "query") {
+    return { type: "query" };
+  }
+  return { type: "note", path: route.path };
+}
+
+function createNoteStoragePort(noteService: NoteService): NoteStoragePort {
+  return {
+    loadNotes: () => noteService.loadNotes(),
+    saveNote: (note: Note) => noteService.saveNote(note),
+    deleteNote: (path: Note["path"]) => noteService.deleteNote(path),
+  };
 }

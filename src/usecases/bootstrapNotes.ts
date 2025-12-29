@@ -1,20 +1,18 @@
-import type { Dispatch, StateUpdater } from "preact/hooks";
-
-import type { Route } from "../navigation/route";
-import type { Router } from "../navigation/router";
-import type { Note } from "../types/note";
-import type { NoteService } from "../services/note-service";
+import type { Note } from "../domain/note";
+import type { NoteStoragePort, AppRoute } from "./ports";
+import type { StateSetter } from "./state";
 
 type BootstrapNotesParams = {
   defaultPage: string;
   deriveTitle: (path: string) => string;
   sanitizeNoteForSave: (note: Note) => Note;
-  setNotes: Dispatch<StateUpdater<Note[]>>;
+  setNotes: StateSetter<Note[]>;
   setNotesFromStorage: (notes: Note[]) => void;
-  setRoute: Dispatch<StateUpdater<Route>>;
-  setStatusMessage: Dispatch<StateUpdater<string>>;
-  noteService: NoteService;
-  router: Router;
+  applyRoute: (route: AppRoute) => void;
+  navigateRoute: (route: AppRoute) => void;
+  setStatusMessage: (message: string) => void;
+  noteStorage: NoteStoragePort;
+  getCurrentRoute: () => AppRoute | null;
   signal?: AbortSignal;
 };
 
@@ -30,44 +28,43 @@ export async function bootstrapNotes({
   sanitizeNoteForSave,
   setNotes,
   setNotesFromStorage,
-  setRoute,
+  applyRoute,
+  navigateRoute,
   setStatusMessage,
-  noteService,
-  router,
+  noteStorage,
+  getCurrentRoute,
   signal,
 }: BootstrapNotesParams): Promise<void> {
   try {
-    const loaded = await noteService.loadNotes();
+    const loaded = await noteStorage.loadNotes();
     if (signal?.aborted) {
       return;
     }
     setNotesFromStorage(loaded);
-    const routeFromHash = router.getCurrentRoute();
-    if (routeFromHash?.type === "query") {
-      setRoute(routeFromHash);
+    const routeFromHash = getCurrentRoute();
+    if (routeFromHash?.kind === "query") {
+      applyRoute(routeFromHash);
       return;
     }
-    if (routeFromHash?.type === "note") {
+    if (routeFromHash?.kind === "note") {
       await ensureNoteExists({
         normalized: routeFromHash.path,
         loaded,
         deriveTitle,
         sanitizeNoteForSave,
         setNotes,
-        noteService,
+        noteStorage,
         setStatusMessage,
         signal,
       });
       if (signal?.aborted) {
         return;
       }
-      setRoute(routeFromHash);
+      applyRoute(routeFromHash);
       return;
     }
     if (loaded[0]) {
-      const nextRoute: Route = { type: "note", path: loaded[0].path };
-      setRoute(nextRoute);
-      router.navigate(nextRoute);
+      navigateRoute({ kind: "note", path: loaded[0].path });
       return;
     }
     await createDefaultNote({
@@ -75,16 +72,14 @@ export async function bootstrapNotes({
       deriveTitle,
       sanitizeNoteForSave,
       setNotes,
-      noteService,
+      noteStorage,
       setStatusMessage,
       signal,
     });
     if (signal?.aborted) {
       return;
     }
-    const defaultRoute: Route = { type: "note", path: defaultPage };
-    setRoute(defaultRoute);
-    router.navigate(defaultRoute);
+    navigateRoute({ kind: "note", path: defaultPage });
   } catch (error) {
     if (signal?.aborted) {
       return;
@@ -92,9 +87,7 @@ export async function bootstrapNotes({
     console.error("Failed to bootstrap notes from storage", error);
     setStatusMessage("Failed to load notes, starting from an empty state");
     setNotesFromStorage([]);
-    const fallbackRoute: Route = { type: "note", path: defaultPage };
-    setRoute(fallbackRoute);
-    router.navigate(fallbackRoute);
+    navigateRoute({ kind: "note", path: defaultPage });
   }
 }
 
@@ -103,9 +96,9 @@ type EnsureNoteExistsParams = {
   loaded: Note[];
   deriveTitle: (path: string) => string;
   sanitizeNoteForSave: (note: Note) => Note;
-  setNotes: Dispatch<StateUpdater<Note[]>>;
-  noteService: NoteService;
-  setStatusMessage: Dispatch<StateUpdater<string>>;
+  setNotes: StateSetter<Note[]>;
+  noteStorage: NoteStoragePort;
+  setStatusMessage: (message: string) => void;
   signal?: AbortSignal;
 };
 
@@ -115,7 +108,7 @@ async function ensureNoteExists({
   deriveTitle,
   sanitizeNoteForSave,
   setNotes,
-  noteService,
+  noteStorage,
   setStatusMessage,
   signal,
 }: EnsureNoteExistsParams) {
@@ -130,7 +123,7 @@ async function ensureNoteExists({
   });
   setNotes((prev) => [...prev, newNote]);
   try {
-    await noteService.saveNote(newNote);
+    await noteStorage.saveNote(newNote);
   } catch (error) {
     console.error("Failed to create note via bootstrap hash handling", error);
     if (!signal?.aborted) {
@@ -143,9 +136,9 @@ type CreateDefaultNoteParams = {
   defaultPage: string;
   deriveTitle: (path: string) => string;
   sanitizeNoteForSave: (note: Note) => Note;
-  setNotes: Dispatch<StateUpdater<Note[]>>;
-  noteService: NoteService;
-  setStatusMessage: Dispatch<StateUpdater<string>>;
+  setNotes: StateSetter<Note[]>;
+  noteStorage: NoteStoragePort;
+  setStatusMessage: (message: string) => void;
   signal?: AbortSignal;
 };
 
@@ -154,7 +147,7 @@ async function createDefaultNote({
   deriveTitle,
   sanitizeNoteForSave,
   setNotes,
-  noteService,
+  noteStorage,
   setStatusMessage,
   signal,
 }: CreateDefaultNoteParams) {
@@ -165,7 +158,7 @@ async function createDefaultNote({
   });
   setNotes([fallbackNote]);
   try {
-    await noteService.saveNote(fallbackNote);
+    await noteStorage.saveNote(fallbackNote);
   } catch (error) {
     if (!signal?.aborted) {
       console.error("Failed to create default note during bootstrap", error);

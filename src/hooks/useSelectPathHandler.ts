@@ -37,6 +37,14 @@ export function useSelectPathHandler({
   noteService,
   router,
 }: UseSelectPathHandlerParams) {
+  const openNoteRoute = useCallback(
+    (targetPath: string) => {
+      const nextRoute: Route = { type: "note", path: targetPath };
+      setRoute(nextRoute);
+      router.navigate(nextRoute);
+    },
+    [router, setRoute],
+  );
   return useCallback(
     (path: string) => {
       selectOrCreateNote({
@@ -47,10 +55,11 @@ export function useSelectPathHandler({
         sanitizeNoteForSave,
         setDraftBody,
         setNotes,
-        setRoute,
         setStatusMessage,
-        noteService,
-        router,
+        openNoteRoute,
+        noteStorage: {
+          saveNote: (note) => noteService.saveNote(note),
+        },
       }).catch((error) => {
         console.error("Unhandled error during handleSelectPath", error);
         setStatusMessage("Failed to select note");
@@ -63,10 +72,9 @@ export function useSelectPathHandler({
       sanitizeNoteForSave,
       setDraftBody,
       setNotes,
-      setRoute,
+      openNoteRoute,
       setStatusMessage,
       noteService,
-      router,
     ],
   );
 }

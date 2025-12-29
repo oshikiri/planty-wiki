@@ -204,6 +204,7 @@ export function useAppController({
     deriveTitle,
     notes,
     pendingDeletionPath,
+    pendingSave,
     sanitizeNoteForSave,
     selectedNotePath,
     setNotes,

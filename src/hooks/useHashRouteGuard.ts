@@ -4,6 +4,7 @@ import type { Note } from "../types/note";
 import type { Route } from "../navigation/route";
 import type { Router } from "../navigation/router";
 import { handleHashRouteChange } from "../usecases/hashRouteGuard";
+import type { AppRoute } from "../usecases/ports";
 
 type UseHashRouteGuardParams = {
   deriveTitle: (path: string) => string;
@@ -40,11 +41,11 @@ export function useHashRouteGuard({
         deriveTitle,
         sanitizeNoteForSave,
         setNotes,
-        setRoute,
+        applyRoute: (route) => setRoute(mapAppRouteToNavigation(route)),
         setStatusMessage,
         saveNote,
-        notesRef,
-        router,
+        getNotesSnapshot: () => notesRef.current,
+        getCurrentRoute: () => mapNavigationRouteToApp(router.getCurrentRoute()),
         signal: abortController.signal,
       }).catch((error) => {
         if (abortController.signal.aborted) {
@@ -71,4 +72,21 @@ export function useHashRouteGuard({
     setStatusMessage,
     saveNote,
   ]);
+}
+
+function mapNavigationRouteToApp(route: Route | null): AppRoute | null {
+  if (!route) {
+    return null;
+  }
+  if (route.type === "query") {
+    return { kind: "query" };
+  }
+  return { kind: "note", path: route.path };
+}
+
+function mapAppRouteToNavigation(route: AppRoute): Route {
+  if (route.kind === "query") {
+    return { type: "query" };
+  }
+  return { type: "note", path: route.path };
 }

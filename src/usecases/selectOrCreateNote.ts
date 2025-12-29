@@ -1,10 +1,7 @@
-import type { Dispatch, StateUpdater } from "preact/hooks";
-
-import { normalizePath } from "../navigation";
-import type { Route } from "../navigation/route";
-import type { Router } from "../navigation/router";
-import type { Note } from "../types/note";
-import type { NoteService } from "../services/note-service";
+import { normalizePath } from "../domain/path";
+import type { Note } from "../domain/note";
+import type { NoteStoragePort } from "./ports";
+import type { StateSetter } from "./state";
 
 type SelectOrCreateNoteParams = {
   path: string;
@@ -12,12 +9,11 @@ type SelectOrCreateNoteParams = {
   deriveTitle: (path: string) => string;
   notes: Note[];
   sanitizeNoteForSave: (note: Note) => Note;
-  setDraftBody: Dispatch<StateUpdater<string>>;
-  setNotes: Dispatch<StateUpdater<Note[]>>;
-  setRoute: Dispatch<StateUpdater<Route>>;
-  setStatusMessage: Dispatch<StateUpdater<string>>;
-  noteService: NoteService;
-  router: Router;
+  setDraftBody: (nextBody: string) => void;
+  setNotes: StateSetter<Note[]>;
+  setStatusMessage: (message: string) => void;
+  openNoteRoute: (path: string) => void;
+  noteStorage: Pick<NoteStoragePort, "saveNote">;
 };
 
 /**
@@ -34,28 +30,26 @@ export async function selectOrCreateNote({
   sanitizeNoteForSave,
   setDraftBody,
   setNotes,
-  setRoute,
   setStatusMessage,
-  noteService,
-  router,
+  openNoteRoute,
+  noteStorage,
 }: SelectOrCreateNoteParams): Promise<void> {
   const normalized = path ? normalizePath(path) : defaultPage;
   const existingNote = notes.find((note) => note.path === normalized);
-  let nextBody = existingNote?.body ?? "";
   if (!existingNote) {
     const title = deriveTitle(normalized);
     const newNote = sanitizeNoteForSave({ path: normalized, title, body: "" });
     setNotes((prev) => [...prev, newNote]);
     try {
-      await noteService.saveNote(newNote);
+      await noteStorage.saveNote(newNote);
     } catch (error) {
       console.error("Failed to create note via selectOrCreateNote", error);
       setStatusMessage("Failed to create note");
     }
-    nextBody = newNote.body;
+    setDraftBody(newNote.body);
+    openNoteRoute(normalized);
+    return;
   }
-  const nextRoute: Route = { type: "note", path: normalized };
-  setRoute(nextRoute);
-  setDraftBody(nextBody);
-  router.navigate(nextRoute);
+  setDraftBody(existingNote.body);
+  openNoteRoute(normalized);
 }
