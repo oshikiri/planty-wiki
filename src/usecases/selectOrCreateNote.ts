@@ -1,7 +1,6 @@
 import { normalizePath } from "../domain/path";
 import type { Note } from "../domain/note";
 import type { NoteStoragePort } from "./ports";
-import type { StateSetter } from "./state";
 
 type SelectOrCreateNoteParams = {
   path: string;
@@ -9,18 +8,21 @@ type SelectOrCreateNoteParams = {
   deriveTitle: (path: string) => string;
   notes: Note[];
   sanitizeNoteForSave: (note: Note) => Note;
-  setDraftBody: (nextBody: string) => void;
-  setNotes: StateSetter<Note[]>;
-  setStatusMessage: (message: string) => void;
-  openNoteRoute: (path: string) => void;
   noteStorage: Pick<NoteStoragePort, "saveNote">;
+};
+
+export type SelectOrCreateNoteResult = {
+  notes: Note[];
+  draftBody: string;
+  routePath: string;
+  statusMessage?: string;
 };
 
 /**
  * Normalizes the given path and performs selection or creation before routing to the note.
  *
  * @param params Dependencies required for the transition such as note lists and save functions
- * @returns Promise that resolves when the flow completes
+ * @returns Next note state, draft body, and route path
  */
 export async function selectOrCreateNote({
   path,
@@ -28,28 +30,31 @@ export async function selectOrCreateNote({
   deriveTitle,
   notes,
   sanitizeNoteForSave,
-  setDraftBody,
-  setNotes,
-  setStatusMessage,
-  openNoteRoute,
   noteStorage,
-}: SelectOrCreateNoteParams): Promise<void> {
+}: SelectOrCreateNoteParams): Promise<SelectOrCreateNoteResult> {
   const normalized = path ? normalizePath(path) : defaultPage;
   const existingNote = notes.find((note) => note.path === normalized);
   if (!existingNote) {
     const title = deriveTitle(normalized);
     const newNote = sanitizeNoteForSave({ path: normalized, title, body: "" });
-    setNotes((prev) => [...prev, newNote]);
+    const nextNotes = [...notes, newNote];
+    let statusMessage: string | undefined;
     try {
       await noteStorage.saveNote(newNote);
     } catch (error) {
       console.error("Failed to create note via selectOrCreateNote", error);
-      setStatusMessage("Failed to create note");
+      statusMessage = "Failed to create note";
     }
-    setDraftBody(newNote.body);
-    openNoteRoute(normalized);
-    return;
+    return {
+      notes: nextNotes,
+      draftBody: newNote.body,
+      routePath: normalized,
+      statusMessage,
+    };
   }
-  setDraftBody(existingNote.body);
-  openNoteRoute(normalized);
+  return {
+    notes,
+    draftBody: existingNote.body,
+    routePath: normalized,
+  };
 }

@@ -37,14 +37,6 @@ export function useSelectPathHandler({
   noteService,
   router,
 }: UseSelectPathHandlerParams) {
-  const openNoteRoute = useCallback(
-    (targetPath: string) => {
-      const nextRoute: Route = { type: "note", path: targetPath };
-      setRoute(nextRoute);
-      router.navigate(nextRoute);
-    },
-    [router, setRoute],
-  );
   return useCallback(
     (path: string) => {
       selectOrCreateNote({
@@ -53,17 +45,27 @@ export function useSelectPathHandler({
         deriveTitle,
         notes,
         sanitizeNoteForSave,
-        setDraftBody,
-        setNotes,
-        setStatusMessage,
-        openNoteRoute,
         noteStorage: {
           saveNote: (note) => noteService.saveNote(note),
         },
-      }).catch((error) => {
-        console.error("Unhandled error during handleSelectPath", error);
-        setStatusMessage("Failed to select note");
-      });
+      })
+        .then((result) => {
+          if (!result) {
+            return;
+          }
+          setNotes(result.notes);
+          setDraftBody(result.draftBody);
+          const nextRoute: Route = { type: "note", path: result.routePath };
+          setRoute(nextRoute);
+          router.navigate(nextRoute);
+          if (result.statusMessage) {
+            setStatusMessage(result.statusMessage);
+          }
+        })
+        .catch((error) => {
+          console.error("Unhandled error during handleSelectPath", error);
+          setStatusMessage("Failed to select note");
+        });
     },
     [
       defaultPage,
@@ -72,9 +74,10 @@ export function useSelectPathHandler({
       sanitizeNoteForSave,
       setDraftBody,
       setNotes,
-      openNoteRoute,
       setStatusMessage,
       noteService,
+      router,
+      setRoute,
     ],
   );
 }

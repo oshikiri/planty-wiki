@@ -45,25 +45,32 @@ export function useBootstrapNotes(params: UseBootstrapNotesParams) {
       defaultPage,
       deriveTitle,
       sanitizeNoteForSave,
-      setNotes,
-      setNotesFromStorage,
-      applyRoute: (route) => setRoute(mapAppRouteToNavigation(route)),
-      navigateRoute: (route) => {
-        const nextRoute = mapAppRouteToNavigation(route);
-        setRoute(nextRoute);
-        router.navigate(nextRoute);
-      },
-      setStatusMessage,
       noteStorage: createNoteStoragePort(noteService),
       getCurrentRoute: () => mapNavigationRouteToApp(router.getCurrentRoute()),
       signal: abortController.signal,
-    }).catch((error) => {
-      if (abortController.signal.aborted) {
-        return;
-      }
-      console.error("Failed to bootstrap notes", error);
-      setStatusMessage("Failed to initialize notes");
-    });
+    })
+      .then((result) => {
+        if (abortController.signal.aborted || !result) {
+          return;
+        }
+        setNotes(result.notes);
+        setNotesFromStorage(result.notesFromStorage);
+        const nextRoute = mapAppRouteToNavigation(result.route);
+        setRoute(nextRoute);
+        if (result.shouldNavigate) {
+          router.navigate(nextRoute);
+        }
+        if (result.statusMessage) {
+          setStatusMessage(result.statusMessage);
+        }
+      })
+      .catch((error) => {
+        if (abortController.signal.aborted) {
+          return;
+        }
+        console.error("Failed to bootstrap notes", error);
+        setStatusMessage("Failed to initialize notes");
+      });
     return () => {
       abortController.abort();
     };

@@ -40,20 +40,32 @@ export function useHashRouteGuard({
       handleHashRouteChange({
         deriveTitle,
         sanitizeNoteForSave,
-        setNotes,
-        applyRoute: (route) => setRoute(mapAppRouteToNavigation(route)),
-        setStatusMessage,
+        notes: notesRef.current,
         saveNote,
-        getNotesSnapshot: () => notesRef.current,
         getCurrentRoute: () => mapNavigationRouteToApp(router.getCurrentRoute()),
         signal: abortController.signal,
-      }).catch((error) => {
-        if (abortController.signal.aborted) {
-          return;
-        }
-        console.error("Failed to handle hash route change", error);
-        setStatusMessage("Failed to handle hash route");
-      });
+      })
+        .then((result) => {
+          if (!result || abortController.signal.aborted) {
+            return;
+          }
+          if (result.notes) {
+            setNotes(result.notes);
+          }
+          if (result.route) {
+            setRoute(mapAppRouteToNavigation(result.route));
+          }
+          if (result.statusMessage) {
+            setStatusMessage(result.statusMessage);
+          }
+        })
+        .catch((error) => {
+          if (abortController.signal.aborted) {
+            return;
+          }
+          console.error("Failed to handle hash route change", error);
+          setStatusMessage("Failed to handle hash route");
+        });
 
     runHandler();
     const unsubscribe = router.subscribe(runHandler);

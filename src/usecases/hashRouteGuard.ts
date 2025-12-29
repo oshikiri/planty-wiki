@@ -1,63 +1,57 @@
 import type { Note } from "../domain/note";
 import type { AppRoute } from "./ports";
-import type { StateSetter } from "./state";
 
-type HashRouteGuardParams = {
+export type HashRouteGuardParams = {
   deriveTitle: (path: string) => string;
   sanitizeNoteForSave: (note: Note) => Note;
-  setNotes: StateSetter<Note[]>;
-  applyRoute: (route: AppRoute) => void;
-  setStatusMessage: (message: string) => void;
+  notes: Note[];
   saveNote: (note: Note) => Promise<void>;
-  getNotesSnapshot: () => Note[];
   getCurrentRoute: () => AppRoute | null;
   signal?: AbortSignal;
 };
 
+export type HashRouteGuardResult = {
+  notes?: Note[];
+  route?: AppRoute;
+  statusMessage?: string;
+};
+
 /**
  * Handles hashchange events by checking the route and creating or routing to the note when necessary.
- *
- * @param params Dependencies such as note references and save functions
- * @returns Promise that resolves when processing completes
  */
 export async function handleHashRouteChange({
   deriveTitle,
   sanitizeNoteForSave,
-  setNotes,
-  applyRoute,
-  setStatusMessage,
+  notes,
   saveNote,
-  getNotesSnapshot,
   getCurrentRoute,
   signal,
-}: HashRouteGuardParams): Promise<void> {
+}: HashRouteGuardParams): Promise<HashRouteGuardResult | null> {
   const routeFromHash = getCurrentRoute();
-  const latestNotes = getNotesSnapshot();
   if (!routeFromHash || signal?.aborted) {
-    return;
+    return null;
   }
   if (routeFromHash.kind === "query") {
-    applyRoute(routeFromHash);
-    return;
+    return { route: routeFromHash };
   }
-  if (!latestNotes.length) return;
-  const next = routeFromHash.path;
-
-  const exists = latestNotes.some((note) => note.path === next);
-  if (!exists) {
-    const title = deriveTitle(next);
-    const newNote = sanitizeNoteForSave({ path: next, title, body: "" });
-    setNotes((prev) => [...prev, newNote]);
-    try {
-      await saveNote(newNote);
-    } catch (error) {
-      if (!signal?.aborted) {
-        console.error("Failed to create note via hashchange", error);
-        setStatusMessage("Failed to create note from hash");
-      }
+  const exists = notes.some((note) => note.path === routeFromHash.path);
+  if (exists) {
+    return { route: routeFromHash };
+  }
+  const title = deriveTitle(routeFromHash.path);
+  const newNote = sanitizeNoteForSave({ path: routeFromHash.path, title, body: "" });
+  let statusMessage: string | undefined;
+  try {
+    await saveNote(newNote);
+  } catch (error) {
+    if (!signal?.aborted) {
+      console.error("Failed to create note via hashchange", error);
+      statusMessage = "Failed to create note from hash";
     }
   }
-  if (!signal?.aborted) {
-    applyRoute(routeFromHash);
-  }
+  return {
+    notes: [...notes, newNote],
+    route: routeFromHash,
+    statusMessage,
+  };
 }

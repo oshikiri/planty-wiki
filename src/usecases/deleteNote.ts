@@ -1,9 +1,8 @@
 import type { Note } from "../domain/note";
 import type { NoteStoragePort } from "./ports";
 import type { PendingSave } from "../types/note";
-import type { StateSetter } from "./state";
 
-type DeleteNoteParams = {
+export type DeleteNoteParams = {
   defaultPage: string;
   deriveTitle: (path: string) => string;
   notes: Note[];
@@ -11,19 +10,22 @@ type DeleteNoteParams = {
   pendingSave: PendingSave | null;
   sanitizeNoteForSave: (note: Note) => Note;
   selectedNotePath: string | null;
-  setNotes: StateSetter<Note[]>;
-  setPendingDeletionPath: (next: string | null) => void;
-  setPendingSave: StateSetter<PendingSave | null>;
-  setStatusMessage: (message: string) => void;
   noteStorage: NoteStoragePort;
-  openNoteRoute: (path: string) => void;
+};
+
+export type DeleteNoteResult = {
+  notes: Note[];
+  pendingDeletionPath: string | null;
+  pendingSave: PendingSave | null;
+  routePath?: string;
+  statusMessage?: string;
 };
 
 /**
  * Confirms deletion for the pending note, recreating a default page when needed before routing.
  *
  * @param params Dependencies required for deletion such as note lists and persistence APIs
- * @returns Promise that resolves once the process finishes
+ * @returns Result containing updated notes, pending state, and next route
  */
 export async function deletePendingNote({
   defaultPage,
@@ -33,48 +35,50 @@ export async function deletePendingNote({
   pendingSave,
   sanitizeNoteForSave,
   selectedNotePath,
-  setNotes,
-  setPendingDeletionPath,
-  setPendingSave,
-  setStatusMessage,
   noteStorage,
-  openNoteRoute,
-}: DeleteNoteParams): Promise<void> {
+}: DeleteNoteParams): Promise<DeleteNoteResult> {
   if (!pendingDeletionPath) {
-    return;
+    return {
+      notes,
+      pendingDeletionPath,
+      pendingSave,
+    };
   }
   const path = pendingDeletionPath;
-  setPendingDeletionPath(null);
-  if (pendingSave?.path === path) {
-    setPendingSave(null);
-  }
-  const previousNotes = notes;
-  const remaining = previousNotes.filter((note) => note.path !== path);
-  setNotes(remaining);
-  const deleted = await deleteNoteViaService(path, noteStorage, setStatusMessage, () => {
-    setNotes(previousNotes);
-  });
+  const nextPendingSave = pendingSave?.path === path ? null : pendingSave;
+  const remaining = notes.filter((note) => note.path !== path);
+  const deleted = await deleteNoteViaService(path, noteStorage);
   if (!deleted) {
-    return;
+    return {
+      notes,
+      pendingDeletionPath: null,
+      pendingSave,
+      statusMessage: "Failed to delete note",
+    };
   }
   const handledEmpty = await handleEmptyAfterDelete({
     remaining,
     defaultPage,
     deriveTitle,
     sanitizeNoteForSave,
-    setNotes,
-    setStatusMessage,
     noteStorage,
-    openNoteRoute,
   });
   if (handledEmpty) {
-    return;
+    return {
+      notes: handledEmpty.notes,
+      pendingDeletionPath: null,
+      pendingSave: nextPendingSave,
+      routePath: handledEmpty.routePath,
+      statusMessage: handledEmpty.statusMessage,
+    };
   }
-  const nextPath = selectNextPathAfterDelete(previousNotes, remaining, path, selectedNotePath);
-  if (!nextPath) {
-    return;
-  }
-  openNoteRoute(nextPath);
+  const nextPath = selectNextPathAfterDelete(notes, remaining, path, selectedNotePath);
+  return {
+    notes: remaining,
+    pendingDeletionPath: null,
+    pendingSave: nextPendingSave,
+    routePath: nextPath ?? undefined,
+  };
 }
 
 function selectNextPathAfterDelete(
@@ -98,19 +102,12 @@ function selectNextPathAfterDelete(
   return remaining[nextIndex]?.path ?? remaining[0].path;
 }
 
-async function deleteNoteViaService(
-  path: string,
-  noteStorage: NoteStoragePort,
-  setStatusMessage: (message: string) => void,
-  rollbackNotes: () => void,
-): Promise<boolean> {
+async function deleteNoteViaService(path: string, noteStorage: NoteStoragePort): Promise<boolean> {
   try {
     await noteStorage.deleteNote(path);
     return true;
   } catch (error) {
     console.error("Failed to delete note from storage", error);
-    setStatusMessage("Failed to delete note");
-    rollbackNotes();
     return false;
   }
 }
@@ -120,10 +117,7 @@ type HandleEmptyAfterDeleteParams = {
   defaultPage: string;
   deriveTitle: (path: string) => string;
   sanitizeNoteForSave: (note: Note) => Note;
-  setNotes: (nextNotes: Note[]) => void;
-  setStatusMessage: (message: string) => void;
   noteStorage: NoteStoragePort;
-  openNoteRoute: (path: string) => void;
 };
 
 async function handleEmptyAfterDelete({
@@ -131,27 +125,31 @@ async function handleEmptyAfterDelete({
   defaultPage,
   deriveTitle,
   sanitizeNoteForSave,
-  setNotes,
-  setStatusMessage,
   noteStorage,
-  openNoteRoute,
-}: HandleEmptyAfterDeleteParams): Promise<boolean> {
+}: HandleEmptyAfterDeleteParams): Promise<{
+  notes: Note[];
+  routePath: string;
+  statusMessage?: string;
+} | null> {
   if (remaining.length) {
-    return false;
+    return null;
   }
   const fallbackNote = sanitizeNoteForSave({
     path: defaultPage,
     title: deriveTitle(defaultPage),
     body: "",
   });
-  setNotes([fallbackNote]);
+  let statusMessage: string | undefined;
   try {
     await noteStorage.saveNote(fallbackNote);
-    setStatusMessage("Created a new default page after deleting the last note");
+    statusMessage = "Created a new default page after deleting the last note";
   } catch (error) {
     console.error("Failed to recreate default note after deletion", error);
-    setStatusMessage("Failed to recreate default note");
+    statusMessage = "Failed to recreate default note";
   }
-  openNoteRoute(fallbackNote.path);
-  return true;
+  return {
+    notes: [fallbackNote],
+    routePath: fallbackNote.path,
+    statusMessage,
+  };
 }

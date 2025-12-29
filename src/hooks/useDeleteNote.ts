@@ -46,29 +46,36 @@ export function useDeleteNote({
   router,
 }: UseDeleteNoteParams) {
   return useCallback(async () => {
-    await deletePendingNote({
-      defaultPage,
-      deriveTitle,
-      notes,
-      pendingDeletionPath,
-      pendingSave,
-      sanitizeNoteForSave,
-      selectedNotePath,
-      setNotes,
-      setPendingDeletionPath: (next) => setPendingDeletionPath(next),
-      setPendingSave,
-      setStatusMessage: (message) => setStatusMessage(message),
-      noteStorage: {
-        deleteNote: (path) => noteService.deleteNote(path),
-        saveNote: (note) => noteService.saveNote(note),
-        loadNotes: () => noteService.loadNotes(),
-      },
-      openNoteRoute: (targetPath) => {
-        const nextRoute: Route = { type: "note", path: targetPath };
+    try {
+      const result = await deletePendingNote({
+        defaultPage,
+        deriveTitle,
+        notes,
+        pendingDeletionPath,
+        pendingSave,
+        sanitizeNoteForSave,
+        selectedNotePath,
+        noteStorage: {
+          deleteNote: (path) => noteService.deleteNote(path),
+          saveNote: (note) => noteService.saveNote(note),
+          loadNotes: () => noteService.loadNotes(),
+        },
+      });
+      setNotes(result.notes);
+      setPendingDeletionPath(result.pendingDeletionPath);
+      setPendingSave(result.pendingSave);
+      if (result.routePath) {
+        const nextRoute: Route = { type: "note", path: result.routePath };
         setRoute(nextRoute);
         router.navigate(nextRoute);
-      },
-    });
+      }
+      if (result.statusMessage) {
+        setStatusMessage(result.statusMessage);
+      }
+    } catch (error) {
+      console.error("Failed to delete note", error);
+      setStatusMessage("Failed to delete note");
+    }
   }, [
     defaultPage,
     deriveTitle,
