@@ -1,4 +1,4 @@
-import { normalizePath } from "../navigation";
+import { normalizePath } from "./path";
 
 export interface Note {
   path: string;
