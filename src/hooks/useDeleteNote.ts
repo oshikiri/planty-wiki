@@ -1,6 +1,6 @@
 import { useCallback, type Dispatch, type StateUpdater } from "preact/hooks";
 
-import { formatHashFromPath } from "../navigation";
+import { formatHashLocation, type Route } from "../navigation/route";
 import type { Note, PendingSave } from "../types/note";
 import type { NoteService } from "../services/note-service";
 
@@ -10,11 +10,11 @@ export type UseDeleteNoteParams = {
   notes: Note[];
   pendingDeletionPath: string | null;
   sanitizeNoteForSave: (note: Note) => Note;
-  selectedPath: string;
+  selectedNotePath: string | null;
   setNotes: Dispatch<StateUpdater<Note[]>>;
   setPendingDeletionPath: Dispatch<StateUpdater<string | null>>;
   setPendingSave: Dispatch<StateUpdater<PendingSave | null>>;
-  setSelectedPath: Dispatch<StateUpdater<string>>;
+  setRoute: Dispatch<StateUpdater<Route>>;
   setStatusMessage: Dispatch<StateUpdater<string>>;
   noteService: NoteService;
 };
@@ -31,11 +31,11 @@ export function useDeleteNote({
   notes,
   pendingDeletionPath,
   sanitizeNoteForSave,
-  selectedPath,
+  selectedNotePath,
   setNotes,
   setPendingDeletionPath,
   setPendingSave,
-  setSelectedPath,
+  setRoute,
   setStatusMessage,
   noteService,
 }: UseDeleteNoteParams) {
@@ -63,28 +63,28 @@ export function useDeleteNote({
       deriveTitle,
       sanitizeNoteForSave,
       setNotes,
-      setSelectedPath,
+      setRoute,
       setStatusMessage,
       noteService,
     });
     if (handledEmpty) {
       return;
     }
-    const nextPath = selectNextPathAfterDelete(previousNotes, remaining, path, selectedPath);
+    const nextPath = selectNextPathAfterDelete(previousNotes, remaining, path, selectedNotePath);
     if (!nextPath) return;
-    setSelectedPath(nextPath);
-    window.location.hash = formatHashFromPath(nextPath);
+    setRoute({ type: "note", path: nextPath });
+    window.location.hash = formatHashLocation({ type: "note", path: nextPath });
   }, [
     defaultPage,
     deriveTitle,
     notes,
     pendingDeletionPath,
     sanitizeNoteForSave,
-    selectedPath,
+    selectedNotePath,
     setNotes,
     setPendingDeletionPath,
     setPendingSave,
-    setSelectedPath,
+    setRoute,
     setStatusMessage,
     noteService,
   ]);
@@ -94,7 +94,7 @@ function selectNextPathAfterDelete(
   before: Note[],
   remaining: Note[],
   deletedPath: string,
-  selectedPath: string,
+  selectedPath: string | null,
 ): string | null {
   if (!remaining.length) {
     return null;
@@ -147,7 +147,7 @@ type HandleEmptyAfterDeleteParams = {
   deriveTitle: (path: string) => string;
   sanitizeNoteForSave: (note: Note) => Note;
   setNotes: Dispatch<StateUpdater<Note[]>>;
-  setSelectedPath: Dispatch<StateUpdater<string>>;
+  setRoute: Dispatch<StateUpdater<Route>>;
   setStatusMessage: Dispatch<StateUpdater<string>>;
   noteService: NoteService;
 };
@@ -158,7 +158,7 @@ async function handleEmptyAfterDelete({
   deriveTitle,
   sanitizeNoteForSave,
   setNotes,
-  setSelectedPath,
+  setRoute,
   setStatusMessage,
   noteService,
 }: HandleEmptyAfterDeleteParams) {
@@ -178,7 +178,7 @@ async function handleEmptyAfterDelete({
     console.error("Failed to recreate default note after deletion", error);
     setStatusMessage("Failed to recreate default note");
   }
-  setSelectedPath(fallbackNote.path);
-  window.location.hash = formatHashFromPath(fallbackNote.path);
+  setRoute({ type: "note", path: fallbackNote.path });
+  window.location.hash = formatHashLocation({ type: "note", path: fallbackNote.path });
   return true;
 }

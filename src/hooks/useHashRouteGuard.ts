@@ -1,14 +1,13 @@
 import { useEffect, type Dispatch, type MutableRef, type StateUpdater } from "preact/hooks";
 
-import { normalizePath, parseHashPath } from "../navigation";
 import type { Note } from "../types/note";
+import { parseHashLocation, type Route } from "../navigation/route";
 
 type UseHashRouteGuardParams = {
   deriveTitle: (path: string) => string;
-  reservedPaths: string[];
   sanitizeNoteForSave: (note: Note) => Note;
   setNotes: Dispatch<StateUpdater<Note[]>>;
-  setSelectedPath: Dispatch<StateUpdater<string>>;
+  setRoute: Dispatch<StateUpdater<Route>>;
   setStatusMessage: Dispatch<StateUpdater<string>>;
   saveNote: (note: Note) => Promise<void>;
   notesRef: MutableRef<Note[]>;
@@ -22,24 +21,26 @@ type UseHashRouteGuardParams = {
  */
 export function useHashRouteGuard({
   deriveTitle,
-  reservedPaths,
   sanitizeNoteForSave,
   setNotes,
-  setSelectedPath,
+  setRoute,
   setStatusMessage,
   saveNote,
   notesRef,
 }: UseHashRouteGuardParams) {
   useEffect(() => {
     const handleHashChange = async () => {
-      const hashValue = parseHashPath();
-      const next = hashValue ? normalizePath(hashValue) : null;
+      const routeFromHash = parseHashLocation(window.location.hash);
       const latestNotes = notesRef.current;
-      if (!next || !latestNotes.length) return;
-      if (reservedPaths.includes(next)) {
-        setSelectedPath(next);
+      if (!routeFromHash) {
         return;
       }
+      if (routeFromHash.type === "query") {
+        setRoute(routeFromHash);
+        return;
+      }
+      if (!latestNotes.length) return;
+      const next = routeFromHash.path;
 
       // notesトリガで登録すると大量に呼び出されてパフォーマンスが落ちるため、マウント/アンマウント時のみ走るように定義する
       const exists = latestNotes.some((note) => note.path === next);
@@ -54,7 +55,7 @@ export function useHashRouteGuard({
           setStatusMessage("Failed to create note from hash");
         }
       }
-      setSelectedPath(next);
+      setRoute(routeFromHash);
     };
 
     window.addEventListener("hashchange", handleHashChange);
@@ -62,14 +63,5 @@ export function useHashRouteGuard({
     return () => {
       window.removeEventListener("hashchange", handleHashChange);
     };
-  }, [
-    deriveTitle,
-    reservedPaths,
-    notesRef,
-    sanitizeNoteForSave,
-    setNotes,
-    setSelectedPath,
-    setStatusMessage,
-    saveNote,
-  ]);
+  }, [deriveTitle, notesRef, sanitizeNoteForSave, setNotes, setRoute, setStatusMessage, saveNote]);
 }

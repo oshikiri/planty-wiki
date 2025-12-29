@@ -1,5 +1,7 @@
-import { beforeEach, describe, expect, it } from "vitest";
-import { formatHashFromPath, normalizePath, parseHashPath } from "./navigation";
+import { describe, expect, it } from "vitest";
+import { formatHashFromPath, normalizePath } from "./index";
+import { formatHashLocation, parseHashLocation } from "./route";
+import { DEFAULT_PAGE_PATH, QUERY_PAGE_PATH } from "./constants";
 
 describe("normalizePath", () => {
   it("trims trailing slashes", () => {
@@ -54,35 +56,33 @@ describe("normalizePath", () => {
   });
 });
 
-describe("parseHashPath", () => {
-  beforeEach(() => {
-    window.location.hash = "";
-  });
-
-  it("decodes percent-encoded values", () => {
-    window.location.hash = "#%2Fpages%2Falpha";
-    expect(parseHashPath()).toBe("/pages/alpha");
-  });
-
-  it("returns the hash when already normalized", () => {
-    window.location.hash = "#/pages/bravo";
-    expect(parseHashPath()).toBe("/pages/bravo");
+describe("parseHashLocation", () => {
+  it("decodes percent-encoded values into note routes", () => {
+    expect(parseHashLocation("#%2Fpages%2Falpha")).toEqual({
+      type: "note",
+      path: "/pages/alpha",
+    });
   });
 
   it("returns null when hash is empty", () => {
-    window.location.hash = "";
-    expect(parseHashPath()).toBeNull();
+    expect(parseHashLocation("")).toBeNull();
+  });
+
+  it("returns query route when hash matches query path", () => {
+    expect(parseHashLocation(`#${QUERY_PAGE_PATH}`)).toEqual({ type: "query" });
   });
 
   it("falls back to raw hash on decode errors", () => {
-    window.location.hash = "#/%E0%A4%A";
-    expect(parseHashPath()).toBe("/%E0%A4%A");
+    expect(parseHashLocation("#/%E0%A4%A")).toEqual({
+      type: "note",
+      path: "/%E0%A4%A",
+    });
   });
 });
 
 describe("formatHashFromPath", () => {
   it("retains slashes while encoding segments", () => {
-    expect(formatHashFromPath("/pages/index")).toBe("#/pages/index");
+    expect(formatHashFromPath(DEFAULT_PAGE_PATH)).toBe(`#${DEFAULT_PAGE_PATH}`);
   });
 
   it("encodes whitespace in segments", () => {
@@ -103,5 +103,17 @@ describe("formatHashFromPath", () => {
 
   it("formats paths that become root after sanitization", () => {
     expect(formatHashFromPath("\u0000..\u0001\\\\")).toBe("#/");
+  });
+});
+
+describe("formatHashLocation", () => {
+  it("formats note routes using encoded path segments", () => {
+    expect(formatHashLocation({ type: "note", path: "/pages/My notes" })).toBe(
+      "#/pages/My%20notes",
+    );
+  });
+
+  it("formats query routes to the fixed query hash", () => {
+    expect(formatHashLocation({ type: "query" })).toBe(`#${QUERY_PAGE_PATH}`);
   });
 });

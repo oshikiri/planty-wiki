@@ -1,19 +1,18 @@
 import { useEffect, type Dispatch, type StateUpdater } from "preact/hooks";
 
-import { normalizePath, parseHashPath } from "../navigation";
 import type { Note } from "../types/note";
 import type { NoteService } from "../services/note-service";
+import { parseHashLocation, type Route } from "../navigation/route";
 
 type SetNotesFromStorage = (next: Note[]) => void;
 
 export type UseBootstrapNotesParams = {
   defaultPage: string;
-  reservedPaths: string[];
   deriveTitle: (path: string) => string;
   sanitizeNoteForSave: (note: Note) => Note;
   setNotes: Dispatch<StateUpdater<Note[]>>;
   setNotesFromStorage: SetNotesFromStorage;
-  setSelectedPath: Dispatch<StateUpdater<string>>;
+  setRoute: Dispatch<StateUpdater<Route>>;
   setStatusMessage: Dispatch<StateUpdater<string>>;
   noteService: NoteService;
 };
@@ -24,17 +23,17 @@ export type UseBootstrapNotesParams = {
  * @param params defaultPageやストレージAPIなどブート処理に必要な依存をまとめたオブジェクト
  * @returns void
  */
-export function useBootstrapNotes({
-  defaultPage,
-  reservedPaths,
-  deriveTitle,
-  sanitizeNoteForSave,
-  setNotes,
-  setNotesFromStorage,
-  setSelectedPath,
-  setStatusMessage,
-  noteService,
-}: UseBootstrapNotesParams) {
+export function useBootstrapNotes(params: UseBootstrapNotesParams) {
+  const {
+    defaultPage,
+    deriveTitle,
+    sanitizeNoteForSave,
+    setNotes,
+    setNotesFromStorage,
+    setRoute,
+    setStatusMessage,
+    noteService,
+  } = params;
   useEffect(() => {
     let isMounted = true;
     async function bootstrap() {
@@ -42,18 +41,17 @@ export function useBootstrapNotes({
         const loaded = await noteService.loadNotes();
         if (!isMounted) return;
         setNotesFromStorage(loaded);
-        const hashPath = parseHashPath();
-        const normalized = hashPath ? normalizePath(hashPath) : null;
-        if (normalized) {
-          if (reservedPaths.includes(normalized)) {
-            if (isMounted) {
-              setSelectedPath(normalized);
-            }
-            return;
+        const routeFromHash = parseHashLocation(window.location.hash);
+        if (routeFromHash?.type === "query") {
+          if (isMounted) {
+            setRoute(routeFromHash);
           }
+          return;
+        }
+        if (routeFromHash?.type === "note") {
           await ensureNoteExists({
             isMounted,
-            normalized,
+            normalized: routeFromHash.path,
             loaded,
             deriveTitle,
             sanitizeNoteForSave,
@@ -62,13 +60,13 @@ export function useBootstrapNotes({
             setStatusMessage,
           });
           if (isMounted) {
-            setSelectedPath(normalized);
+            setRoute(routeFromHash);
           }
           return;
         }
         if (loaded[0]) {
           if (isMounted) {
-            setSelectedPath(loaded[0].path);
+            setRoute({ type: "note", path: loaded[0].path });
           }
           return;
         }
@@ -81,14 +79,14 @@ export function useBootstrapNotes({
             noteService,
             setStatusMessage,
           });
-          setSelectedPath(defaultPage);
+          setRoute({ type: "note", path: defaultPage });
         }
       } catch (error) {
         console.error("Failed to bootstrap notes from storage", error);
         if (!isMounted) return;
         setStatusMessage("Failed to load notes, starting from an empty state");
         setNotesFromStorage([]);
-        setSelectedPath(defaultPage);
+        setRoute({ type: "note", path: defaultPage });
       }
     }
     bootstrap();
@@ -97,12 +95,11 @@ export function useBootstrapNotes({
     };
   }, [
     defaultPage,
-    reservedPaths,
     deriveTitle,
     sanitizeNoteForSave,
     setNotes,
     setNotesFromStorage,
-    setSelectedPath,
+    setRoute,
     setStatusMessage,
     noteService,
   ]);

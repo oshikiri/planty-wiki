@@ -1,18 +1,18 @@
 import { useCallback, type Dispatch, type StateUpdater } from "preact/hooks";
 
-import { formatHashFromPath, normalizePath } from "../navigation";
+import { normalizePath } from "../navigation";
+import { formatHashLocation, type Route } from "../navigation/route";
 import type { Note } from "../types/note";
 import type { NoteService } from "../services/note-service";
 
 export type UseSelectPathHandlerParams = {
   defaultPage: string;
-  reservedPaths: string[];
   deriveTitle: (path: string) => string;
   notes: Note[];
   sanitizeNoteForSave: (note: Note) => Note;
   setDraftBody: Dispatch<StateUpdater<string>>;
   setNotes: Dispatch<StateUpdater<Note[]>>;
-  setSelectedPath: Dispatch<StateUpdater<string>>;
+  setRoute: Dispatch<StateUpdater<Route>>;
   setStatusMessage: Dispatch<StateUpdater<string>>;
   noteService: NoteService;
 };
@@ -25,13 +25,12 @@ export type UseSelectPathHandlerParams = {
  */
 export function useSelectPathHandler({
   defaultPage,
-  reservedPaths,
   deriveTitle,
   notes,
   sanitizeNoteForSave,
   setDraftBody,
   setNotes,
-  setSelectedPath,
+  setRoute,
   setStatusMessage,
   noteService,
 }: UseSelectPathHandlerParams) {
@@ -39,12 +38,6 @@ export function useSelectPathHandler({
     (path: string) => {
       const run = async () => {
         const normalized = path ? normalizePath(path) : defaultPage;
-        if (reservedPaths.includes(normalized)) {
-          setSelectedPath(normalized);
-          setDraftBody("");
-          window.location.hash = formatHashFromPath(normalized);
-          return;
-        }
         const existingNote = notes.find((note) => note.path === normalized);
         let nextBody = existingNote?.body ?? "";
         if (!existingNote) {
@@ -59,9 +52,9 @@ export function useSelectPathHandler({
           }
           nextBody = newNote.body;
         }
-        setSelectedPath(normalized);
+        setRoute({ type: "note", path: normalized });
         setDraftBody(nextBody);
-        window.location.hash = formatHashFromPath(normalized);
+        window.location.hash = formatHashLocation({ type: "note", path: normalized });
       };
       run().catch((error) => {
         console.error("Unhandled error during handleSelectPath", error);
@@ -70,13 +63,12 @@ export function useSelectPathHandler({
     },
     [
       defaultPage,
-      reservedPaths,
       deriveTitle,
       notes,
       sanitizeNoteForSave,
       setDraftBody,
       setNotes,
-      setSelectedPath,
+      setRoute,
       setStatusMessage,
       noteService,
     ],

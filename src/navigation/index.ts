@@ -4,23 +4,6 @@ export type WikiLink = {
 };
 
 /**
- * location.hashからノートパスを取り出して正規化前の文字列として返す。
- *
- * @returns ハッシュに指定されたパス。未指定時はnull
- */
-export function parseHashPath(): string | null {
-  const raw = window.location.hash.replace(/^#/, "");
-  if (!raw) {
-    return null;
-  }
-  try {
-    return decodeURIComponent(raw);
-  } catch {
-    return raw;
-  }
-}
-
-/**
  * ノートパスを#/pages/foo形式のハッシュ値へフォーマットし、セグメント単位でエンコードする。
  *
  * @param path ノートの絶対パス

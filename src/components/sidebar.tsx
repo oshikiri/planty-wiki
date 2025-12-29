@@ -6,7 +6,7 @@ import type { Note } from "../types/note";
 
 type SidebarProps = {
   notes: Note[];
-  selectedPath: string;
+  selectedPath: string | null;
   onSelectPath: (path: string) => void;
   onOpenQuery: () => void;
   onImportMarkdown: () => void;
@@ -136,7 +136,7 @@ type SidebarContextMenuProps = {
 
 type SidebarListProps = {
   notes: Note[];
-  selectedPath: string;
+  selectedPath: string | null;
   onSelectPath: (path: string) => void;
   onContextMenu: (event: MouseEvent, path: string) => void;
 };
@@ -175,7 +175,7 @@ function SidebarListSection({
 }: {
   title: string;
   notes: Note[];
-  selectedPath: string;
+  selectedPath: string | null;
   onSelectPath: (path: string) => void;
   onContextMenu: (event: MouseEvent, path: string) => void;
   keyPrefix: string;

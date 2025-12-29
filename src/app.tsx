@@ -5,6 +5,8 @@ import { QueryPage } from "./components/query-page";
 import { Sidebar } from "./components/sidebar";
 import { SearchSidebar } from "./components/search-sidebar";
 import { normalizePath } from "./navigation";
+import { DEFAULT_PAGE_PATH } from "./navigation/constants";
+import { formatHashLocation, QUERY_ROUTE, type Route } from "./navigation/route";
 import type { Note, PendingSave } from "./types/note";
 import { createNoteService, type NoteService } from "./services/note-service";
 import { createQueryService } from "./services/query-service";
@@ -20,8 +22,7 @@ import { useStatusMessage } from "./hooks/useStatusMessage";
 
 import styles from "./app.module.css";
 
-const DEFAULT_PAGE = "/pages/index";
-const QUERY_PAGE = "/tools/query";
+const EMPTY_NOTE: Note = { path: "", title: "", body: "" };
 
 /**
  * Planty Wiki全体を束ねるルートコンポーネントを描画する。
@@ -46,7 +47,6 @@ export function App() {
   const noteService = serviceState.noteService;
   const storageInitError = serviceState.error;
   const queryService = useMemo(() => createQueryService(), []);
-  const reservedPaths = useMemo(() => [QUERY_PAGE], []);
 
   if (!noteService) {
     // 永続ストレージを初期化できなければ通常のUIを出しても保存できないため、明示的に停止する
@@ -54,29 +54,42 @@ export function App() {
   }
   const [notes, setNotes] = useState<Note[]>([]);
   const [noteRevision, setNoteRevision] = useState(0);
-  const [selectedPath, setSelectedPath] = useState<string>(DEFAULT_PAGE);
+  const [route, setRoute] = useState<Route>({ type: "note", path: DEFAULT_PAGE_PATH });
+  const selectedNotePath = route.type === "note" ? route.path : null;
   const [pendingDeletionPath, setPendingDeletionPath] = useState<string | null>(null);
   const notesRef = useRef<Note[]>([]);
-  const current = useMemo<Note>(() => {
-    const found = notes.find((note) => note.path === selectedPath);
+  const currentNote = useMemo<Note | null>(() => {
+    if (route.type !== "note") {
+      return null;
+    }
+    const found = notes.find((note) => note.path === route.path);
     if (found) {
       return found;
     }
     return {
-      path: selectedPath,
+      path: route.path,
       title: "",
       body: "",
     };
-  }, [notes, selectedPath]);
+  }, [notes, route]);
   const [draftBody, setDraftBody] = useState<string>("");
   const [statusMessage, setStatusMessage] = useStatusMessage("");
   useEffect(() => {
     notesRef.current = notes;
   }, [notes]);
   useEffect(() => {
+    if (!currentNote) {
+      return;
+    }
     // ノート切り替えや初回ロード時に保存済み本文へ同期して、空文字との差分で誤ってisDirty扱いにならないようにする
-    setDraftBody(current.body);
-  }, [current.body, current.path]);
+    setDraftBody(currentNote.body);
+  }, [currentNote]);
+  useEffect(() => {
+    if (route.type !== "query") {
+      return;
+    }
+    setDraftBody("");
+  }, [route]);
   const {
     query: searchQuery,
     results: searchResults,
@@ -89,7 +102,7 @@ export function App() {
   const deriveTitle = useCallback((path: string) => deriveTitleFromPath(path), []);
   const sanitizeNoteForSave = useCallback(
     (note: Note): Note => {
-      const normalizedPath = normalizePath(note.path || DEFAULT_PAGE);
+      const normalizedPath = normalizePath(note.path || DEFAULT_PAGE_PATH);
       const title = note.title?.trim() || deriveTitle(normalizedPath);
       const body = typeof note.body === "string" ? note.body : "";
       return {
@@ -107,44 +120,45 @@ export function App() {
   }, []);
 
   useBootstrapNotes({
-    defaultPage: DEFAULT_PAGE,
-    reservedPaths,
+    defaultPage: DEFAULT_PAGE_PATH,
     deriveTitle,
     sanitizeNoteForSave,
     setNotes,
     setNotesFromStorage,
-    setSelectedPath,
+    setRoute,
     setStatusMessage,
     noteService,
   });
 
   const handleSelectPath = useSelectPathHandler({
-    defaultPage: DEFAULT_PAGE,
-    reservedPaths,
+    defaultPage: DEFAULT_PAGE_PATH,
     deriveTitle,
     notes,
     sanitizeNoteForSave,
     setDraftBody,
     setNotes,
-    setSelectedPath,
+    setRoute,
     setStatusMessage,
     noteService,
   });
 
-  const isDirty = draftBody !== current.body;
+  const isDirty = currentNote ? draftBody !== currentNote.body : false;
 
-  const backlinks = useBacklinks(notes, current, noteService);
+  const backlinks = useBacklinks(notes, currentNote ?? EMPTY_NOTE, noteService);
 
   const handleChangeDraft = useCallback(
     (nextBody: string) => {
+      if (!currentNote) {
+        return;
+      }
       setDraftBody(nextBody);
       setPendingSave({
-        path: current.path,
-        title: current.title,
+        path: currentNote.path,
+        title: currentNote.title,
         body: nextBody,
       });
     },
-    [current],
+    [currentNote],
   );
 
   useAutoSave({
@@ -158,11 +172,10 @@ export function App() {
 
   useHashRouteGuard({
     deriveTitle,
-    reservedPaths,
     notesRef,
     sanitizeNoteForSave,
     setNotes,
-    setSelectedPath,
+    setRoute,
     setStatusMessage,
     saveNote: noteService.saveNote,
   });
@@ -177,18 +190,22 @@ export function App() {
   const handleExportMarkdown = useCallback(() => {
     noteService.exportToDirectory({ notes, setStatusMessage });
   }, [noteService, notes, setStatusMessage]);
+  const handleOpenQuery = useCallback(() => {
+    setRoute(QUERY_ROUTE);
+    window.location.hash = formatHashLocation(QUERY_ROUTE);
+  }, [setRoute]);
 
   const handleDeleteNote = useDeleteNote({
-    defaultPage: DEFAULT_PAGE,
+    defaultPage: DEFAULT_PAGE_PATH,
     deriveTitle,
     notes,
     pendingDeletionPath,
     sanitizeNoteForSave,
-    selectedPath,
+    selectedNotePath,
     setNotes,
     setPendingDeletionPath,
     setPendingSave,
-    setSelectedPath,
+    setRoute,
     setStatusMessage,
     noteService,
   });
@@ -206,9 +223,9 @@ export function App() {
       <main class={styles.appMain}>
         <Sidebar
           notes={notes}
-          selectedPath={selectedPath}
+          selectedPath={selectedNotePath}
           onSelectPath={handleSelectPath}
-          onOpenQuery={() => handleSelectPath(QUERY_PAGE)}
+          onOpenQuery={handleOpenQuery}
           onImportMarkdown={handleImportMarkdown}
           onExportMarkdown={handleExportMarkdown}
           onDeleteNote={handleRequestDelete}
@@ -216,11 +233,11 @@ export function App() {
           onCancelDelete={handleCancelDelete}
           onConfirmDelete={handleDeleteNote}
         />
-        {selectedPath === QUERY_PAGE ? (
+        {route.type === "query" ? (
           <QueryPage runQuery={queryService.runQuery} />
         ) : (
           <Editor
-            note={current}
+            note={currentNote ?? EMPTY_NOTE}
             noteRevision={noteRevision}
             onChangeDraft={handleChangeDraft}
             statusMessage={statusMessage}
