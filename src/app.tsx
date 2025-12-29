@@ -7,9 +7,8 @@ import { SearchSidebar } from "./components/search-sidebar";
 import { DEFAULT_PAGE_PATH } from "./navigation/constants";
 import { formatHashLocation, QUERY_ROUTE, type Route } from "./navigation/route";
 import type { Note, PendingSave } from "./types/note";
-import { createNoteService, type NoteService } from "./services/note-service";
+import type { NoteService } from "./services/note-service";
 import { createQueryService } from "./services/query-service";
-import { createOpfsNoteRepository } from "./infrastructure/opfs-note-repository";
 import { buildNote, deriveTitleFromPath } from "./domain/note";
 
 import { useBacklinks } from "./hooks/useBacklinks";
@@ -25,35 +24,18 @@ import styles from "./app.module.css";
 
 const EMPTY_NOTE: Note = { path: "", title: "", body: "" };
 
+type AppProps = {
+  noteService: NoteService;
+};
+
 /**
  * Planty Wiki全体を束ねるルートコンポーネントを描画する。
  *
+ * @param props 依存関係としてのNoteService
  * @returns ルートアプリケーションのJSX
  */
-export function App() {
-  const [serviceState] = useState<{
-    noteService: NoteService | null;
-    error: Error | null;
-  }>(() => {
-    try {
-      const repository = createOpfsNoteRepository();
-      return { noteService: createNoteService(repository), error: null };
-    } catch (error) {
-      return {
-        noteService: null,
-        error: error instanceof Error ? error : new Error(String(error)),
-      };
-    }
-  });
-
-  const noteService = serviceState.noteService;
-  const storageInitError = serviceState.error;
+export function App({ noteService }: AppProps) {
   const queryService = useMemo(() => createQueryService(), []);
-
-  if (!noteService) {
-    // 永続ストレージを初期化できなければ通常のUIを出しても保存できないため、明示的に停止する
-    return <StorageInitError message={storageInitError?.message} />;
-  }
   const [notes, setNotes] = useState<Note[]>([]);
   const [noteRevision, setNoteRevision] = useState(0);
   const [route, setRoute] = useState<Route>({ type: "note", path: DEFAULT_PAGE_PATH });
@@ -249,7 +231,13 @@ export function App() {
   );
 }
 
-function StorageInitError({ message }: { message?: string | null }) {
+/**
+ * ストレージ初期化失敗時にエラーメッセージを描画する。
+ *
+ * @param props ブラウザ環境から受け取った例外メッセージ
+ * @returns エラー表示用のUI
+ */
+export function StorageInitError({ message }: { message?: string | null }) {
   return (
     <div class={styles.app}>
       <output class={styles.storageWarning} aria-live="polite">
