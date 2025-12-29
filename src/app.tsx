@@ -8,7 +8,7 @@ import { DEFAULT_PAGE_PATH } from "./navigation/constants";
 import { formatHashLocation, QUERY_ROUTE, type Route } from "./navigation/route";
 import type { Note, PendingSave } from "./types/note";
 import type { NoteService } from "./services/note-service";
-import { createQueryService } from "./services/query-service";
+import type { QueryService } from "./services/query-service";
 import { buildNote, deriveTitleFromPath } from "./domain/note";
 
 import { useBacklinks } from "./hooks/useBacklinks";
@@ -26,16 +26,16 @@ const EMPTY_NOTE: Note = { path: "", title: "", body: "" };
 
 type AppProps = {
   noteService: NoteService;
+  queryService: QueryService;
 };
 
 /**
  * Planty Wiki全体を束ねるルートコンポーネントを描画する。
  *
- * @param props 依存関係としてのNoteService
+ * @param props 依存関係としてのNoteServiceとQueryService
  * @returns ルートアプリケーションのJSX
  */
-export function App({ noteService }: AppProps) {
-  const queryService = useMemo(() => createQueryService(), []);
+export function App({ noteService, queryService }: AppProps) {
   const [notes, setNotes] = useState<Note[]>([]);
   const [noteRevision, setNoteRevision] = useState(0);
   const [route, setRoute] = useState<Route>({ type: "note", path: DEFAULT_PAGE_PATH });
