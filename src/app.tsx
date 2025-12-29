@@ -4,13 +4,13 @@ import { Editor } from "./components/editor";
 import { QueryPage } from "./components/query-page";
 import { Sidebar } from "./components/sidebar";
 import { SearchSidebar } from "./components/search-sidebar";
-import { normalizePath } from "./navigation";
 import { DEFAULT_PAGE_PATH } from "./navigation/constants";
 import { formatHashLocation, QUERY_ROUTE, type Route } from "./navigation/route";
 import type { Note, PendingSave } from "./types/note";
 import { createNoteService, type NoteService } from "./services/note-service";
 import { createQueryService } from "./services/query-service";
 import { createOpfsNoteRepository } from "./infrastructure/opfs-note-repository";
+import { buildNote, deriveTitleFromPath } from "./domain/note";
 
 import { useBacklinks } from "./hooks/useBacklinks";
 import { useBootstrapNotes } from "./hooks/useBootstrapNotes";
@@ -103,18 +103,8 @@ export function App() {
   const [pendingSave, setPendingSave] = useState<PendingSave | null>(null);
   const deriveTitle = useCallback((path: string) => deriveTitleFromPath(path), []);
   const sanitizeNoteForSave = useCallback(
-    (note: Note): Note => {
-      const normalizedPath = normalizePath(note.path || DEFAULT_PAGE_PATH);
-      const title = note.title?.trim() || deriveTitle(normalizedPath);
-      const body = typeof note.body === "string" ? note.body : "";
-      return {
-        ...note,
-        path: normalizedPath,
-        title,
-        body,
-      };
-    },
-    [deriveTitle],
+    (note: Note): Note => buildNote({ ...note, path: note.path || DEFAULT_PAGE_PATH }),
+    [],
   );
   const setNotesFromStorage = useCallback((next: Note[]) => {
     setNotes(next);
@@ -257,18 +247,6 @@ export function App() {
       </main>
     </div>
   );
-}
-
-/**
- * deriveTitleFromPathはノートパスの末尾セグメントからタイトルを導出し、空の場合はfallbackを返す。
- *
- * @param path ノートのパス
- * @param fallback パスが空だった場合に返すフォールバック文字列
- * @returns パス末尾を元にしたタイトル
- */
-function deriveTitleFromPath(path: string, fallback = "untitled"): string {
-  const segments = path.split("/").filter(Boolean);
-  return segments.slice(-1)[0] ?? fallback;
 }
 
 function StorageInitError({ message }: { message?: string | null }) {
