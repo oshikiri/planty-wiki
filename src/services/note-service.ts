@@ -1,6 +1,6 @@
 import { exportNotesToDirectory, importMarkdownFromDirectory } from "../storage/file-bridge";
-import { createStorage, type NoteStorage } from "../storage";
 import type { Note, SearchResult } from "../types/note";
+import type { NoteRepository } from "../domain/note-repository";
 
 export type NoteService = {
   loadNotes: () => Promise<Note[]>;
@@ -19,46 +19,33 @@ export type NoteService = {
 };
 
 /**
- * 本番向けのNoteServiceを生成する。内部でストレージ実装を初期化し、UIからの依存を隠蔽する。
+ * 指定されたNoteRepositoryをラップしてNoteServiceを構築する。UIテスト向けのモック差し替えにも利用する。
  *
- * @returns OPFS SQLite バックエンドへ委譲するNoteService
+ * @param repository 永続層の抽象化
+ * @returns repositoryを委譲先とするNoteService
  */
-export function createNoteService(): NoteService {
-  const storage = createStorage();
-  return createNoteServiceFromStorage(storage);
-}
-
-/**
- * 指定されたNoteStorageをラップしてNoteServiceを構築する。UIテスト向けのモック差し替えにも利用する。
- *
- * @param storage 永続層の具体実装
- * @returns storageを委譲先とするNoteService
- */
-export function createNoteServiceFromStorage(storage: NoteStorage): NoteService {
+export function createNoteService(repository: NoteRepository): NoteService {
   return {
     async loadNotes() {
-      return storage.loadNotes();
+      return repository.loadAll();
     },
     async saveNote(note: Note) {
-      await storage.saveNote(note);
+      await repository.save(note);
     },
     async deleteNote(path: Note["path"]) {
-      await storage.deleteNote(path);
+      await repository.delete(path);
     },
     async importFromDirectory({ applyImportedNotes, setStatusMessage }) {
-      await importMarkdownFromDirectory(storage, applyImportedNotes, setStatusMessage);
+      await importMarkdownFromDirectory(repository, applyImportedNotes, setStatusMessage);
     },
     async exportToDirectory({ notes, setStatusMessage }) {
       await exportNotesToDirectory(notes, setStatusMessage);
     },
     async searchNotes(query: string) {
-      if (typeof storage.searchNotes !== "function") {
-        return [];
-      }
-      return storage.searchNotes(query);
+      return repository.search(query);
     },
     async listBacklinks(targetPath: Note["path"]) {
-      return storage.listBacklinks(targetPath);
+      return repository.listBacklinks(targetPath);
     },
   };
 }
@@ -70,12 +57,17 @@ export function createNoteServiceFromStorage(storage: NoteStorage): NoteService 
  * @returns インメモリで完結するNoteService
  */
 export function createInMemoryNoteService(initialNotes: Note[] = []): NoteService {
+  const repository: NoteRepository = createInMemoryRepository(initialNotes);
+  return createNoteService(repository);
+}
+
+function createInMemoryRepository(initialNotes: Note[]): NoteRepository {
   let notes = [...initialNotes];
   return {
-    async loadNotes() {
+    async loadAll() {
       return [...notes];
     },
-    async saveNote(note: Note) {
+    async save(note: Note) {
       const index = notes.findIndex((entry) => entry.path === note.path);
       if (index === -1) {
         notes = [...notes, note];
@@ -85,16 +77,13 @@ export function createInMemoryNoteService(initialNotes: Note[] = []): NoteServic
       copy[index] = note;
       notes = copy;
     },
-    async deleteNote(path: Note["path"]) {
+    async delete(path: Note["path"]) {
       notes = notes.filter((note) => note.path !== path);
     },
-    async importFromDirectory({ applyImportedNotes }) {
-      applyImportedNotes([...notes]);
+    async importBatch(imported: Note[]) {
+      notes = [...imported];
     },
-    async exportToDirectory() {
-      return;
-    },
-    async searchNotes(query: string) {
+    async search(query: string): Promise<SearchResult[]> {
       const trimmed = query.trim();
       if (!trimmed) {
         return [];

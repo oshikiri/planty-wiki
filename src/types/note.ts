@@ -1,15 +1,6 @@
-export type Note = {
-  path: string;
-  title: string;
-  body: string;
-  updatedAt?: string;
-};
+import type { Note } from "../domain/note";
 
-export type SearchResult = {
-  path: string;
-  title: string;
-  snippet: string;
-};
+export type { Note, SearchResult } from "../domain/note";
 
 export type PendingSave = {
   path: Note["path"];

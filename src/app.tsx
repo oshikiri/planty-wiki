@@ -10,6 +10,7 @@ import { formatHashLocation, QUERY_ROUTE, type Route } from "./navigation/route"
 import type { Note, PendingSave } from "./types/note";
 import { createNoteService, type NoteService } from "./services/note-service";
 import { createQueryService } from "./services/query-service";
+import { createOpfsNoteRepository } from "./infrastructure/opfs-note-repository";
 
 import { useBacklinks } from "./hooks/useBacklinks";
 import { useBootstrapNotes } from "./hooks/useBootstrapNotes";
@@ -35,7 +36,8 @@ export function App() {
     error: Error | null;
   }>(() => {
     try {
-      return { noteService: createNoteService(), error: null };
+      const repository = createOpfsNoteRepository();
+      return { noteService: createNoteService(repository), error: null };
     } catch (error) {
       return {
         noteService: null,

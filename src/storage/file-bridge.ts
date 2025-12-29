@@ -1,6 +1,6 @@
 import { normalizePath } from "../navigation";
-import type { NoteStorage } from "./index";
 import type { Note } from "../types/note";
+import type { NoteRepository } from "../domain/note-repository";
 
 type DirectoryFileEntry = {
   relativePath: string;
@@ -10,13 +10,13 @@ type DirectoryFileEntry = {
 /**
  * ユーザー指定ディレクトリからMarkdownと同ディレクトリの画像を読み込み、ノートストレージへ一括反映する。
  *
- * @param storage 永続化に利用するNoteStorage実装
+ * @param repository NoteRepositoryの実装
  * @param applyImportedNotes ストレージの最新状態をUIへ反映するコールバック
  * @param setStatusMessage 進捗やエラーをユーザーへ伝えるステータス更新関数
  * @returns インポート完了を待機するPromise
  */
 export async function importMarkdownFromDirectory(
-  storage: NoteStorage,
+  repository: NoteRepository,
   applyImportedNotes: (notes: Note[]) => void,
   setStatusMessage: (message: string) => void,
 ): Promise<void> {
@@ -42,8 +42,8 @@ export async function importMarkdownFromDirectory(
       markdownFiles,
       setStatusMessage,
     });
-    await storage.importNotes(importedNotes);
-    const updated = await storage.loadNotes();
+    await repository.importBatch(importedNotes);
+    const updated = await repository.loadAll();
     applyImportedNotes(updated);
     setStatusMessage(`Imported ${importedNotes.length} notes from folder`);
     setTimeout(() => setStatusMessage(""), 2000);
