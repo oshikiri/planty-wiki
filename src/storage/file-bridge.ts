@@ -7,24 +7,30 @@ type DirectoryFileEntry = {
   file: File;
 };
 
+export type ImportMarkdownResult =
+  | { status: "unsupported" }
+  | { status: "no-markdown" }
+  | { status: "success"; importedCount: number; notes: Note[] }
+  | { status: "failed" };
+
+export type ExportNotesResult =
+  | { status: "unsupported" }
+  | { status: "no-notes" }
+  | { status: "success"; exportedCount: number }
+  | { status: "failed" };
+
 /**
- * ユーザー指定ディレクトリからMarkdownと同ディレクトリの画像を読み込み、ノートストレージへ一括反映する。
+ * ユーザー指定ディレクトリからMarkdownを読み込み、ノートストレージへ一括反映する。
  *
  * @param repository NoteRepositoryの実装
- * @param applyImportedNotes ストレージの最新状態をUIへ反映するコールバック
- * @param setStatusMessage 進捗やエラーをユーザーへ伝えるステータス更新関数
- * @returns インポート完了を待機するPromise
+ * @returns ストレージへ反映した結果
  */
 export async function importMarkdownFromDirectory(
   repository: NoteRepository,
-  applyImportedNotes: (notes: Note[]) => void,
-  setStatusMessage: (message: string) => void,
-): Promise<void> {
+): Promise<ImportMarkdownResult> {
   const anyWindow = window as typeof window & { showDirectoryPicker?: () => Promise<unknown> };
   if (typeof anyWindow.showDirectoryPicker !== "function") {
-    setStatusMessage("This browser does not support directory access");
-    setTimeout(() => setStatusMessage(""), 2000);
-    return;
+    return { status: "unsupported" };
   }
   try {
     const dirHandle =
@@ -34,58 +40,44 @@ export async function importMarkdownFromDirectory(
       entry.relativePath.toLowerCase().endsWith(".md"),
     );
     if (!markdownFiles.length) {
-      setStatusMessage("No Markdown files found in the selected folder");
-      setTimeout(() => setStatusMessage(""), 2000);
-      return;
+      return { status: "no-markdown" };
     }
-    const importedNotes = await importMarkdownFilesWithProgress({
-      markdownFiles,
-      setStatusMessage,
-    });
+    const importedNotes = await importMarkdownFiles(markdownFiles);
     await repository.importBatch(importedNotes);
     const updated = await repository.loadAll();
-    applyImportedNotes(updated);
-    setStatusMessage(`Imported ${importedNotes.length} notes from folder`);
-    setTimeout(() => setStatusMessage(""), 2000);
+    return {
+      status: "success",
+      importedCount: importedNotes.length,
+      notes: updated,
+    };
   } catch (error) {
     console.error("Failed to import Markdown notes", error);
-    setStatusMessage("Failed to import Markdown notes");
-    setTimeout(() => setStatusMessage(""), 2000);
+    return { status: "failed" };
   }
 }
 
 /**
- * 指定ノート一覧をユーザーが選んだディレクトリへMarkdownと添付ファイルとして書き出す。
+ * 指定ノート一覧をユーザーが選んだディレクトリへMarkdownとして書き出す。
  *
  * @param notes エクスポート対象ノートの配列
- * @param setStatusMessage 進捗やエラーを表すメッセージ更新関数
- * @returns エクスポート完了を待機するPromise
+ * @returns エクスポート処理の結果
  */
-export async function exportNotesToDirectory(
-  notes: Note[],
-  setStatusMessage: (message: string) => void,
-): Promise<void> {
+export async function exportNotesToDirectory(notes: Note[]): Promise<ExportNotesResult> {
   if (!notes.length) {
-    setStatusMessage("No notes to export");
-    setTimeout(() => setStatusMessage(""), 2000);
-    return;
+    return { status: "no-notes" };
   }
   const anyWindow = window as typeof window & { showDirectoryPicker?: () => Promise<unknown> };
   if (typeof anyWindow.showDirectoryPicker !== "function") {
-    setStatusMessage("This browser does not support directory access");
-    setTimeout(() => setStatusMessage(""), 2000);
-    return;
+    return { status: "unsupported" };
   }
   try {
     const dirHandle =
       (await anyWindow.showDirectoryPicker()) as unknown as FileSystemDirectoryHandle;
     await exportNotes(notes, dirHandle);
-    setStatusMessage(`Exported ${notes.length} notes to folder`);
-    setTimeout(() => setStatusMessage(""), 2000);
+    return { status: "success", exportedCount: notes.length };
   } catch (error) {
     console.error("Failed to export Markdown notes", error);
-    setStatusMessage("Failed to export Markdown notes");
-    setTimeout(() => setStatusMessage(""), 2000);
+    return { status: "failed" };
   }
 }
 
@@ -141,21 +133,9 @@ function normalizeEntryPath(value: string): string {
   return value.replace(/\\/g, "/");
 }
 
-type ImportLoopParams = {
-  markdownFiles: DirectoryFileEntry[];
-  setStatusMessage: (message: string) => void;
-};
-
-async function importMarkdownFilesWithProgress({
-  markdownFiles,
-  setStatusMessage,
-}: ImportLoopParams): Promise<Note[]> {
+async function importMarkdownFiles(markdownFiles: DirectoryFileEntry[]): Promise<Note[]> {
   const importedNotes: Note[] = [];
-  const totalNotes = markdownFiles.length;
-  for (let index = 0; index < totalNotes; index++) {
-    const fileEntry = markdownFiles[index];
-    const progressPercent = Math.round(((index + 1) / totalNotes) * 100);
-    setStatusMessage(`Importing notes (${index + 1}/${totalNotes}, ${progressPercent}%)`);
+  for (const fileEntry of markdownFiles) {
     const normalizedPath = normalizeEntryPath(fileEntry.relativePath);
     const text = await fileEntry.file.text();
     const note = createNoteFromMarkdownPath(normalizedPath, text);

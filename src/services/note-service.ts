@@ -1,4 +1,9 @@
-import { exportNotesToDirectory, importMarkdownFromDirectory } from "../storage/file-bridge";
+import {
+  exportNotesToDirectory,
+  importMarkdownFromDirectory,
+  type ExportNotesResult,
+  type ImportMarkdownResult,
+} from "../storage/file-bridge";
 import type { Note, SearchResult } from "../types/note";
 import type { NoteRepository } from "../domain/note-repository";
 
@@ -6,14 +11,8 @@ export type NoteService = {
   loadNotes: () => Promise<Note[]>;
   saveNote: (note: Note) => Promise<void>;
   deleteNote: (path: Note["path"]) => Promise<void>;
-  importFromDirectory: (params: {
-    applyImportedNotes: (notes: Note[]) => void;
-    setStatusMessage: (message: string) => void;
-  }) => Promise<void>;
-  exportToDirectory: (params: {
-    notes: Note[];
-    setStatusMessage: (message: string) => void;
-  }) => Promise<void>;
+  importFromDirectory: () => Promise<ImportMarkdownResult>;
+  exportToDirectory: (notes: Note[]) => Promise<ExportNotesResult>;
   searchNotes: (query: string) => Promise<SearchResult[]>;
   listBacklinks: (targetPath: Note["path"]) => Promise<Note[]>;
 };
@@ -35,11 +34,11 @@ export function createNoteService(repository: NoteRepository): NoteService {
     async deleteNote(path: Note["path"]) {
       await repository.delete(path);
     },
-    async importFromDirectory({ applyImportedNotes, setStatusMessage }) {
-      await importMarkdownFromDirectory(repository, applyImportedNotes, setStatusMessage);
+    async importFromDirectory() {
+      return importMarkdownFromDirectory(repository);
     },
-    async exportToDirectory({ notes, setStatusMessage }) {
-      await exportNotesToDirectory(notes, setStatusMessage);
+    async exportToDirectory(notes: Note[]) {
+      return exportNotesToDirectory(notes);
     },
     async searchNotes(query: string) {
       return repository.search(query);

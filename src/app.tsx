@@ -58,9 +58,30 @@ export function App({ noteService }: AppProps) {
   }, [notes, route]);
   const [draftBody, setDraftBody] = useState<string>("");
   const [statusMessage, setStatusMessage] = useStatusMessage("");
+  const statusResetTimerRef = useRef<number | null>(null);
+  const showTemporaryStatus = useCallback(
+    (message: string) => {
+      setStatusMessage(message);
+      if (statusResetTimerRef.current !== null) {
+        window.clearTimeout(statusResetTimerRef.current);
+      }
+      statusResetTimerRef.current = window.setTimeout(() => {
+        setStatusMessage("");
+        statusResetTimerRef.current = null;
+      }, 2000);
+    },
+    [setStatusMessage],
+  );
   useEffect(() => {
     notesRef.current = notes;
   }, [notes]);
+  useEffect(() => {
+    return () => {
+      if (statusResetTimerRef.current !== null) {
+        window.clearTimeout(statusResetTimerRef.current);
+      }
+    };
+  }, []);
   useEffect(() => {
     if (!currentNote) {
       return;
@@ -155,15 +176,53 @@ export function App({ noteService }: AppProps) {
   });
 
   const handleImportMarkdown = useCallback(() => {
-    noteService.importFromDirectory({
-      applyImportedNotes: setNotesFromStorage,
-      setStatusMessage,
-    });
-  }, [noteService, setNotesFromStorage, setStatusMessage]);
+    noteService
+      .importFromDirectory()
+      .then((result) => {
+        if (result.status === "success") {
+          setNotesFromStorage(result.notes);
+          showTemporaryStatus(`Imported ${result.importedCount} notes from folder`);
+          return;
+        }
+        if (result.status === "no-markdown") {
+          showTemporaryStatus("No Markdown files found in the selected folder");
+          return;
+        }
+        if (result.status === "unsupported") {
+          showTemporaryStatus("This browser does not support directory access");
+          return;
+        }
+        showTemporaryStatus("Failed to import Markdown notes");
+      })
+      .catch((error) => {
+        console.error("Failed to import Markdown notes", error);
+        showTemporaryStatus("Failed to import Markdown notes");
+      });
+  }, [noteService, setNotesFromStorage, showTemporaryStatus]);
 
   const handleExportMarkdown = useCallback(() => {
-    noteService.exportToDirectory({ notes, setStatusMessage });
-  }, [noteService, notes, setStatusMessage]);
+    noteService
+      .exportToDirectory(notes)
+      .then((result) => {
+        if (result.status === "success") {
+          showTemporaryStatus(`Exported ${result.exportedCount} notes to folder`);
+          return;
+        }
+        if (result.status === "no-notes") {
+          showTemporaryStatus("No notes to export");
+          return;
+        }
+        if (result.status === "unsupported") {
+          showTemporaryStatus("This browser does not support directory access");
+          return;
+        }
+        showTemporaryStatus("Failed to export Markdown notes");
+      })
+      .catch((error) => {
+        console.error("Failed to export Markdown notes", error);
+        showTemporaryStatus("Failed to export Markdown notes");
+      });
+  }, [noteService, notes, showTemporaryStatus]);
   const handleOpenQuery = useCallback(() => {
     setRoute(QUERY_ROUTE);
     window.location.hash = formatHashLocation(QUERY_ROUTE);
