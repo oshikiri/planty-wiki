@@ -3,6 +3,7 @@ import { useEffect, type Dispatch, type MutableRef, type StateUpdater } from "pr
 import type { Note } from "../types/note";
 import type { Route } from "../navigation/route";
 import type { Router } from "../navigation/router";
+import { handleHashRouteChange } from "../usecases/hashRouteGuard";
 
 type UseHashRouteGuardParams = {
   deriveTitle: (path: string) => string;
@@ -32,46 +33,32 @@ export function useHashRouteGuard({
   router,
 }: UseHashRouteGuardParams) {
   useEffect(() => {
-    const handleHashChange = async () => {
-      const routeFromHash = router.getCurrentRoute();
-      const latestNotes = notesRef.current;
-      if (!routeFromHash) {
-        return;
-      }
-      if (routeFromHash.type === "query") {
-        setRoute(routeFromHash);
-        return;
-      }
-      if (!latestNotes.length) return;
-      const next = routeFromHash.path;
+    const abortController = new AbortController();
 
-      // notesトリガで登録すると大量に呼び出されてパフォーマンスが落ちるため、マウント/アンマウント時のみ走るように定義する
-      const exists = latestNotes.some((note) => note.path === next);
-      if (!exists) {
-        const title = deriveTitle(next);
-        const newNote = sanitizeNoteForSave({ path: next, title, body: "" });
-        setNotes((prev) => [...prev, newNote]);
-        try {
-          await saveNote(newNote);
-        } catch (error) {
-          console.error("Failed to create note via hashchange", error);
-          setStatusMessage("Failed to create note from hash");
+    const runHandler = () =>
+      handleHashRouteChange({
+        deriveTitle,
+        sanitizeNoteForSave,
+        setNotes,
+        setRoute,
+        setStatusMessage,
+        saveNote,
+        notesRef,
+        router,
+        signal: abortController.signal,
+      }).catch((error) => {
+        if (abortController.signal.aborted) {
+          return;
         }
-      }
-      setRoute(routeFromHash);
-    };
-
-    handleHashChange().catch((error) => {
-      console.error("Failed to handle initial hash route", error);
-    });
-
-    const unsubscribe = router.subscribe(() => {
-      handleHashChange().catch((error) => {
         console.error("Failed to handle hash route change", error);
+        setStatusMessage("Failed to handle hash route");
       });
-    });
+
+    runHandler();
+    const unsubscribe = router.subscribe(runHandler);
 
     return () => {
+      abortController.abort();
       unsubscribe();
     };
   }, [
