@@ -10,12 +10,6 @@ export interface Note extends NoteSummary {
   body: string;
 }
 
-export interface SearchResult {
-  path: string;
-  title: string;
-  snippet: string;
-}
-
 export type NoteInput = {
   path: string;
   title?: string | null;

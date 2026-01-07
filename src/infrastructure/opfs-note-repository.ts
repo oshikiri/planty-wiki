@@ -1,7 +1,6 @@
 import type { NoteRepository } from "../domain/note-repository";
 import type { Note, NoteSummary } from "../domain/note";
 import { createStorage, type NoteStorage } from "../storage";
-import type { SearchResult } from "../types/note";
 
 /**
  * OpfsNoteRepository is a NoteRepository implementation that delegates to the OPFS + SQLite storage.
@@ -31,13 +30,6 @@ export class OpfsNoteRepository implements NoteRepository {
 
   importBatch(notes: Note[]): Promise<void> {
     return this.storage.importNotes(notes);
-  }
-
-  async search(query: string): Promise<SearchResult[]> {
-    if (typeof this.storage.searchNotes !== "function") {
-      return [];
-    }
-    return this.storage.searchNotes(query);
   }
 
   listBacklinks(targetPath: Note["path"]): Promise<Note[]> {

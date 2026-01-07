@@ -1,6 +1,5 @@
 import { QueryPage } from "./components/query-page";
 import { Sidebar } from "./components/sidebar";
-import { SearchSidebar } from "./components/search-sidebar";
 import { Editor } from "./components/editor";
 import type { NoteService } from "./services/note-service";
 import type { QueryService } from "./services/query-service";
@@ -30,12 +29,9 @@ export function App({ noteService, queryService, router }: AppProps) {
     selectedNotePath,
     pendingDeletionPath,
     statusMessage,
-    searchQuery,
-    searchResults,
     editorNote,
     isDirty,
     backlinks,
-    handleSearch,
     handleSelectPath,
     handleOpenQuery,
     handleImportMarkdown,
@@ -75,12 +71,6 @@ export function App({ noteService, queryService, router }: AppProps) {
             onSelectPath={handleSelectPath}
           />
         )}
-        <SearchSidebar
-          searchQuery={searchQuery}
-          onChangeSearchQuery={handleSearch}
-          searchResults={searchResults}
-          onSelectPath={handleSelectPath}
-        />
       </main>
     </div>
   );

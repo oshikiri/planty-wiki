@@ -1,5 +1,5 @@
 import type { NoteStorage } from "./index";
-import type { Note, NoteSummary, SearchResult } from "../types/note";
+import type { Note, NoteSummary } from "../types/note";
 import { callWorker } from "./sqlite-worker-client";
 
 /**
@@ -77,29 +77,6 @@ export function createSqliteStorage(): NoteStorage {
       } catch (error) {
         console.error("Failed to import notes to SQLite worker.", error);
         throw error;
-      }
-    },
-    async searchNotes(query: string): Promise<SearchResult[]> {
-      const trimmed = query.trim();
-      if (!trimmed) {
-        return [];
-      }
-      try {
-        const result = (await callWorker<SearchResult[]>("searchNotes", { query: trimmed })) ?? [];
-        if (Array.isArray(result)) {
-          return result.map((row) => ({
-            path: row.path,
-            title: row.title,
-            snippet: row.snippet,
-          }));
-        }
-        return [];
-      } catch (error) {
-        console.warn(
-          "Failed to search notes via SQLite worker. Falling back to empty result.",
-          error,
-        );
-        return [];
       }
     },
     async listBacklinks(targetPath: Note["path"]): Promise<Note[]> {

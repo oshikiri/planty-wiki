@@ -59,11 +59,6 @@ self.onmessage = async function (event) {
       return;
     }
 
-    if (type === "searchNotes") {
-      handleSearchNotes(db, id, payload);
-      return;
-    }
-
     if (type === "listBacklinks") {
       handleListBacklinks(db, id, payload);
       return;
@@ -110,7 +105,6 @@ function createOrGetDbPromise() {
             )
           `,
         });
-        initializeFtsStructures(db);
         initializeLinkStructures(db);
         return db;
       } catch (error) {
@@ -251,50 +245,38 @@ function handleDeleteNote(db, id, payload) {
 function handleBulkSaveNotes(db, id, payload) {
   const notes = Array.isArray(payload) ? payload : [];
   const nowForBulk = new Date().toISOString();
-  for (let attempt = 0; attempt < 2; attempt++) {
-    db.exec({ sql: "BEGIN" });
-    try {
-      db.exec({ sql: "DELETE FROM pages" });
-      db.exec({ sql: "DELETE FROM links" });
-      for (let index = 0; index < notes.length; index++) {
-        const sanitized = sanitizeNoteForImport(notes[index], nowForBulk, index);
-        db.exec({
-          sql:
-            "INSERT INTO pages (path, title, body, updated_at) VALUES ($path, $title, $body, $updated_at) " +
-            "ON CONFLICT(path) DO UPDATE SET title = excluded.title, body = excluded.body, updated_at = excluded.updated_at",
-          bind: {
-            $path: sanitized.path,
-            $title: sanitized.title,
-            $body: sanitized.body,
-            $updated_at: sanitized.updatedAt,
-          },
-        });
-        insertLinksForSource(db, sanitized.path, sanitized.body);
-      }
-      db.exec({ sql: "COMMIT" });
-      postIfNotCancelled(id, { id: id, ok: true, result: null });
-      return;
-    } catch (error) {
-      try {
-        db.exec({ sql: "ROLLBACK" });
-      } catch (rollbackError) {
-        console.error("Failed to rollback bulk import", rollbackError);
-      }
-      if (isSqliteCorruptVtabError(error) && attempt === 0) {
-        console.warn(
-          "Detected corrupted pages_fts during bulk import. Rebuilding search index before retrying.",
-          error,
-        );
-        rebuildFtsStructures(db);
-        continue;
-      }
-      postIfNotCancelled(id, {
-        id: id,
-        ok: false,
-        error: error && error.message ? String(error.message) : "Failed to import notes",
+  db.exec({ sql: "BEGIN" });
+  try {
+    db.exec({ sql: "DELETE FROM pages" });
+    db.exec({ sql: "DELETE FROM links" });
+    for (let index = 0; index < notes.length; index++) {
+      const sanitized = sanitizeNoteForImport(notes[index], nowForBulk, index);
+      db.exec({
+        sql:
+          "INSERT INTO pages (path, title, body, updated_at) VALUES ($path, $title, $body, $updated_at) " +
+          "ON CONFLICT(path) DO UPDATE SET title = excluded.title, body = excluded.body, updated_at = excluded.updated_at",
+        bind: {
+          $path: sanitized.path,
+          $title: sanitized.title,
+          $body: sanitized.body,
+          $updated_at: sanitized.updatedAt,
+        },
       });
-      return;
+      insertLinksForSource(db, sanitized.path, sanitized.body);
     }
+    db.exec({ sql: "COMMIT" });
+    postIfNotCancelled(id, { id: id, ok: true, result: null });
+  } catch (error) {
+    try {
+      db.exec({ sql: "ROLLBACK" });
+    } catch (rollbackError) {
+      console.error("Failed to rollback bulk import", rollbackError);
+    }
+    postIfNotCancelled(id, {
+      id: id,
+      ok: false,
+      error: error && error.message ? String(error.message) : "Failed to import notes",
+    });
   }
 }
 
@@ -326,48 +308,6 @@ function normalizeWikiLabelToPath(label) {
     return "/pages/" + trimmed.replace(/^\/+/, "");
   }
   return "/pages/" + trimmed;
-}
-
-function handleSearchNotes(db, id, payload) {
-  var query = "";
-  if (payload && typeof payload.query === "string") {
-    query = payload.query.trim();
-  }
-  if (!query) {
-    postIfNotCancelled(id, { id: id, ok: true, result: [] });
-    return;
-  }
-  var rows = [];
-  try {
-    db.exec({
-      sql: `
-        SELECT p.path AS path, p.title AS title,
-               snippet(pages_fts, 2, '[', ']', '…', 10) AS snippet
-        FROM pages_fts
-        JOIN pages AS p ON p.rowid = pages_fts.rowid
-        WHERE pages_fts MATCH $query
-        ORDER BY rank
-        LIMIT 50
-      `,
-      bind: { $query: query },
-      rowMode: "object",
-      callback: function (row) {
-        if (!row || typeof row !== "object") return;
-        rows.push({
-          path: String(row.path || ""),
-          title: String(row.title || ""),
-          snippet: typeof row.snippet === "string" ? row.snippet : "",
-        });
-      },
-    });
-    postIfNotCancelled(id, { id: id, ok: true, result: rows });
-  } catch (error) {
-    postIfNotCancelled(id, {
-      id: id,
-      ok: false,
-      error: error && error.message ? String(error.message) : String(error),
-    });
-  }
 }
 
 function handleListBacklinks(db, id, payload) {
@@ -468,51 +408,6 @@ function stripTrailingSemicolons(text) {
 function isSelectQuery(text) {
   var normalized = String(text || "").trim().toLowerCase();
   return normalized.indexOf("select") === 0 || normalized.indexOf("with") === 0;
-}
-
-function initializeFtsStructures(db) {
-  try {
-    db.exec({
-      sql: `
-        CREATE VIRTUAL TABLE IF NOT EXISTS pages_fts
-        USING fts5(path, title, body, content='pages', content_rowid='rowid')
-      `,
-    });
-    db.exec({
-      sql: `
-        CREATE TRIGGER IF NOT EXISTS pages_ai AFTER INSERT ON pages BEGIN
-          INSERT INTO pages_fts(rowid, path, title, body) VALUES (new.rowid, new.path, new.title, new.body);
-        END;
-      `,
-    });
-    db.exec({
-      sql: `
-        CREATE TRIGGER IF NOT EXISTS pages_ad AFTER DELETE ON pages BEGIN
-          INSERT INTO pages_fts(pages_fts, rowid, path, title, body)
-            VALUES ('delete', old.rowid, old.path, old.title, old.body);
-        END;
-      `,
-    });
-    db.exec({
-      sql: `
-        CREATE TRIGGER IF NOT EXISTS pages_au AFTER UPDATE ON pages BEGIN
-          INSERT INTO pages_fts(pages_fts, rowid, path, title, body)
-            VALUES ('delete', old.rowid, old.path, old.title, old.body);
-          INSERT INTO pages_fts(rowid, path, title, body) VALUES (new.rowid, new.path, new.title, new.body);
-        END;
-      `,
-    });
-    db.exec({
-      sql: `
-        INSERT INTO pages_fts(rowid, path, title, body)
-        SELECT p.rowid, p.path, p.title, p.body
-        FROM pages AS p
-        WHERE NOT EXISTS (SELECT 1 FROM pages_fts WHERE rowid = p.rowid)
-      `,
-    });
-  } catch (error) {
-    console.warn("Failed to initialize FTS5 tables or triggers", error);
-  }
 }
 
 function initializeLinkStructures(db) {
@@ -640,31 +535,6 @@ function extractWikiLinksFromBody(body) {
     results.push({ targetPath: targetPath, display: raw });
   }
   return results;
-}
-
-function rebuildFtsStructures(db) {
-  try {
-    db.exec({ sql: "DROP TRIGGER IF EXISTS pages_ai" });
-    db.exec({ sql: "DROP TRIGGER IF EXISTS pages_ad" });
-    db.exec({ sql: "DROP TRIGGER IF EXISTS pages_au" });
-    db.exec({ sql: "DROP TABLE IF EXISTS pages_fts" });
-  } catch (error) {
-    console.error("Failed to drop existing FTS structures before rebuild", error);
-  }
-  initializeFtsStructures(db);
-}
-
-function isSqliteCorruptVtabError(error) {
-  if (!error) {
-    return false;
-  }
-  var message = "";
-  if (typeof error === "string") {
-    message = error;
-  } else if (typeof error.message === "string") {
-    message = error.message;
-  }
-  return message.indexOf("SQLITE_CORRUPT_VTAB") !== -1;
 }
 
 function markRequestCancelled(targetId) {

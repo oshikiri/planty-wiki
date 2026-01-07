@@ -9,14 +9,13 @@ import {
 
 import { DEFAULT_PAGE_PATH } from "../navigation/constants";
 import { QUERY_ROUTE, type Route } from "../navigation/route";
-import type { Note, PendingSave, SearchResult } from "../types/note";
+import type { Note, PendingSave } from "../types/note";
 import type { NoteService } from "../services/note-service";
 import type { Router } from "../navigation/router";
 import { buildNote, deriveTitleFromPath } from "../domain/note";
 
 import { useBacklinks, type Backlink } from "./useBacklinks";
 import { useBootstrapNotes } from "./useBootstrapNotes";
-import { useNoteSearch } from "./useNoteSearch";
 import { useSelectPathHandler } from "./useSelectPathHandler";
 import { useDeleteNote } from "./useDeleteNote";
 import { useAutoSave } from "./useAutoSave";
@@ -37,12 +36,9 @@ type UseAppControllerResult = {
   selectedNotePath: string | null;
   pendingDeletionPath: string | null;
   statusMessage: string;
-  searchQuery: string;
-  searchResults: SearchResult[] | null;
   editorNote: Note;
   isDirty: boolean;
   backlinks: Backlink[];
-  handleSearch: (query: string) => void;
   handleSelectPath: (path: string) => void;
   handleOpenQuery: () => void;
   handleImportMarkdown: () => Promise<void>;
@@ -145,13 +141,6 @@ export function useAppController({
     }
     setDraftBody("");
   }, [route]);
-  const {
-    query: searchQuery,
-    results: searchResults,
-    handleSearch,
-  } = useNoteSearch({
-    searchNotes: noteService.searchNotes,
-  });
   const [pendingSave, setPendingSave] = useState<PendingSave | null>(null);
   useBootstrapNotes({
     defaultPage: DEFAULT_PAGE_PATH,
@@ -263,12 +252,9 @@ export function useAppController({
     selectedNotePath,
     pendingDeletionPath,
     statusMessage,
-    searchQuery,
-    searchResults,
     editorNote: currentNote ?? EMPTY_NOTE,
     isDirty,
     backlinks,
-    handleSearch,
     handleSelectPath,
     handleOpenQuery,
     handleImportMarkdown,

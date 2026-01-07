@@ -1,4 +1,4 @@
-import type { Note, NoteSummary, SearchResult } from "../types/note";
+import type { Note, NoteSummary } from "../types/note";
 import { createSqliteStorage } from "./opfs-sqlite";
 
 export interface NoteStorage {
@@ -8,7 +8,6 @@ export interface NoteStorage {
   saveNote: (note: Note) => Promise<void>;
   deleteNote: (path: Note["path"]) => Promise<void>;
   importNotes: (notes: Note[]) => Promise<void>;
-  searchNotes?: (query: string) => Promise<SearchResult[]>;
   listBacklinks: (targetPath: Note["path"]) => Promise<Note[]>;
 }
 

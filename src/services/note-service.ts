@@ -4,7 +4,7 @@ import {
   type ExportNotesResult,
   type ImportMarkdownResult,
 } from "../storage/file-bridge";
-import type { Note, NoteSummary, SearchResult } from "../types/note";
+import type { Note, NoteSummary } from "../types/note";
 import type { NoteRepository } from "../domain/note-repository";
 
 export type NoteService = {
@@ -15,7 +15,6 @@ export type NoteService = {
   deleteNote: (path: Note["path"]) => Promise<void>;
   importFromDirectory: () => Promise<ImportMarkdownResult>;
   exportToDirectory: (notes: Note[]) => Promise<ExportNotesResult>;
-  searchNotes: (query: string) => Promise<SearchResult[]>;
   listBacklinks: (targetPath: Note["path"]) => Promise<Note[]>;
 };
 
@@ -47,9 +46,6 @@ export function createNoteService(repository: NoteRepository): NoteService {
     },
     async exportToDirectory(notes: Note[]) {
       return exportNotesToDirectory(notes);
-    },
-    async searchNotes(query: string) {
-      return repository.search(query);
     },
     async listBacklinks(targetPath: Note["path"]) {
       return repository.listBacklinks(targetPath);
@@ -99,19 +95,6 @@ function createInMemoryRepository(initialNotes: Note[]): NoteRepository {
     },
     async importBatch(imported: Note[]) {
       notes = [...imported];
-    },
-    async search(query: string): Promise<SearchResult[]> {
-      const trimmed = query.trim();
-      if (!trimmed) {
-        return [];
-      }
-      return notes
-        .filter((note) => note.title.includes(trimmed) || note.body.includes(trimmed))
-        .map((note) => ({
-          path: note.path,
-          title: note.title,
-          snippet: "",
-        }));
     },
     async listBacklinks(targetPath: Note["path"]) {
       return notes.filter((note) => note.body.includes(targetPath));
