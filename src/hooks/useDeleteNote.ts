@@ -61,7 +61,6 @@ export function useDeleteNote({
           deleteNote: (path) => noteService.deleteNote(path),
           loadNoteSummaries: () => noteService.loadNoteSummaries(),
           loadNote: (path) => noteService.loadNote(path),
-          loadNotes: () => noteService.loadNotes(),
         },
       });
       setPendingDeletionPath(result.pendingDeletionPath);

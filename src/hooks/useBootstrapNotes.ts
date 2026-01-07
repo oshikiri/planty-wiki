@@ -116,7 +116,6 @@ function createNoteStoragePort(noteService: NoteService): NoteStoragePort {
   return {
     loadNoteSummaries: () => noteService.loadNoteSummaries(),
     loadNote: (path: Note["path"]) => noteService.loadNote(path),
-    loadNotes: () => noteService.loadNotes(),
     saveNote: (note: Note) => noteService.saveNote(note),
     deleteNote: (path: Note["path"]) => noteService.deleteNote(path),
   };

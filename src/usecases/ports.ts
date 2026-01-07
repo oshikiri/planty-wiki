@@ -3,7 +3,6 @@ import type { Note, NoteSummary } from "../domain/note";
 export type NoteStoragePort = {
   loadNoteSummaries: () => Promise<NoteSummary[]>;
   loadNote: (path: Note["path"]) => Promise<Note | null>;
-  loadNotes: () => Promise<Note[]>;
   saveNote: (note: Note) => Promise<void>;
   deleteNote: (path: Note["path"]) => Promise<void>;
 };
