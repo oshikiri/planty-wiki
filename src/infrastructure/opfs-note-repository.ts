@@ -1,5 +1,5 @@
 import type { NoteRepository } from "../domain/note-repository";
-import type { Note } from "../domain/note";
+import type { Note, NoteSummary } from "../domain/note";
 import { createStorage, type NoteStorage } from "../storage";
 import type { SearchResult } from "../types/note";
 
@@ -8,6 +8,14 @@ import type { SearchResult } from "../types/note";
  */
 export class OpfsNoteRepository implements NoteRepository {
   constructor(private readonly storage: NoteStorage) {}
+
+  loadSummaries(): Promise<NoteSummary[]> {
+    return this.storage.loadNoteSummaries();
+  }
+
+  loadByPath(path: Note["path"]): Promise<Note | null> {
+    return this.storage.loadNote(path);
+  }
 
   loadAll(): Promise<Note[]> {
     return this.storage.loadNotes();

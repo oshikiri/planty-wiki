@@ -1,7 +1,6 @@
 import {
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
   type Dispatch,
@@ -32,8 +31,8 @@ type UseAppControllerParams = {
 };
 
 type UseAppControllerResult = {
-  notes: Note[];
   noteRevision: number;
+  noteListRevision: number;
   route: Route;
   selectedNotePath: string | null;
   pendingDeletionPath: string | null;
@@ -64,33 +63,27 @@ export function useAppController({
   noteService,
   router,
 }: UseAppControllerParams): UseAppControllerResult {
-  const [notes, setNotes] = useState<Note[]>([]);
+  const [currentNote, setCurrentNote] = useState<Note | null>(null);
   const [noteRevision, setNoteRevision] = useState(0);
+  const [noteListRevision, setNoteListRevision] = useState(0);
   const [route, setRoute] = useState<Route>(
     () => router.getCurrentRoute() ?? { type: "note", path: DEFAULT_PAGE_PATH },
   );
   const selectedNotePath = route.type === "note" ? route.path : null;
   const [pendingDeletionPath, setPendingDeletionPath] = useState<string | null>(null);
-  const notesRef = useRef<Note[]>([]);
-  const currentNote = useMemo<Note | null>(() => {
-    if (route.type !== "note") {
-      return null;
-    }
-    const found = notes.find((note) => note.path === route.path);
-    if (found) {
-      return found;
-    }
-    return {
-      path: route.path,
-      title: "",
-      body: "",
-    };
-  }, [notes, route]);
   const [draftBody, setDraftBody] = useState<string>("");
+  const incrementNoteRevision = useCallback(() => {
+    setNoteRevision((revision) => revision + 1);
+  }, []);
+  const incrementNoteListRevision = useCallback(() => {
+    setNoteListRevision((revision) => revision + 1);
+  }, []);
   const { statusMessage, setStatusMessage, showTemporaryStatus } = useTemporaryStatus("");
-  useEffect(() => {
-    notesRef.current = notes;
-  }, [notes]);
+  const deriveTitle = useCallback((path: string) => deriveTitleFromPath(path), []);
+  const sanitizeNoteForSave = useCallback(
+    (note: Note): Note => buildNote({ ...note, path: note.path || DEFAULT_PAGE_PATH }),
+    [],
+  );
   useEffect(() => {
     if (!currentNote) {
       return;
@@ -98,6 +91,54 @@ export function useAppController({
     // Sync editor body with the stored note to avoid false positive isDirty states on load or note switch.
     setDraftBody(currentNote.body);
   }, [currentNote]);
+  useEffect(() => {
+    if (route.type !== "note") {
+      setCurrentNote(null);
+      setDraftBody("");
+      return;
+    }
+    if (currentNote && currentNote.path === route.path) {
+      return;
+    }
+    let cancelled = false;
+    noteService
+      .loadNote(route.path)
+      .then((note) => {
+        if (cancelled) {
+          return;
+        }
+        if (note) {
+          setCurrentNote(note);
+          incrementNoteRevision();
+          return;
+        }
+        const fallback = sanitizeNoteForSave({
+          path: route.path,
+          title: deriveTitle(route.path),
+          body: "",
+        });
+        setCurrentNote(fallback);
+        incrementNoteRevision();
+      })
+      .catch((error) => {
+        if (cancelled) {
+          return;
+        }
+        console.error("Failed to load note", error);
+        setStatusMessage("Failed to load note");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    route,
+    currentNote,
+    noteService,
+    sanitizeNoteForSave,
+    deriveTitle,
+    incrementNoteRevision,
+    setStatusMessage,
+  ]);
   useEffect(() => {
     if (route.type !== "query") {
       return;
@@ -110,25 +151,15 @@ export function useAppController({
     handleSearch,
   } = useNoteSearch({
     searchNotes: noteService.searchNotes,
-    notes,
   });
   const [pendingSave, setPendingSave] = useState<PendingSave | null>(null);
-  const deriveTitle = useCallback((path: string) => deriveTitleFromPath(path), []);
-  const sanitizeNoteForSave = useCallback(
-    (note: Note): Note => buildNote({ ...note, path: note.path || DEFAULT_PAGE_PATH }),
-    [],
-  );
-  const setNotesFromStorage = useCallback((next: Note[]) => {
-    setNotes(next);
-    setNoteRevision((revision) => revision + 1);
-  }, []);
-
   useBootstrapNotes({
     defaultPage: DEFAULT_PAGE_PATH,
     deriveTitle,
     sanitizeNoteForSave,
-    setNotes,
-    setNotesFromStorage,
+    setCurrentNote,
+    incrementNoteRevision,
+    incrementNoteListRevision,
     setRoute,
     setStatusMessage,
     noteService,
@@ -138,10 +169,11 @@ export function useAppController({
   const handleSelectPath = useSelectPathHandler({
     defaultPage: DEFAULT_PAGE_PATH,
     deriveTitle,
-    notes,
     sanitizeNoteForSave,
     setDraftBody,
-    setNotes,
+    setCurrentNote,
+    incrementNoteRevision,
+    incrementNoteListRevision,
     setRoute,
     setStatusMessage,
     noteService,
@@ -150,7 +182,7 @@ export function useAppController({
 
   const isDirty = currentNote ? draftBody !== currentNote.body : false;
 
-  const backlinks = useBacklinks(notes, currentNote ?? EMPTY_NOTE, noteService);
+  const backlinks = useBacklinks(currentNote ?? EMPTY_NOTE, noteService);
 
   const handleChangeDraft = useCallback(
     (nextBody: string) => {
@@ -171,26 +203,25 @@ export function useAppController({
     pendingSave,
     sanitizeNoteForSave,
     setPendingSave,
-    setNotes,
+    setCurrentNote,
     saveNote: noteService.saveNote,
     setStatusMessage,
+    notifyNotePersisted: incrementNoteListRevision,
   });
 
   useHashRouteGuard({
     deriveTitle,
-    notesRef,
     sanitizeNoteForSave,
-    setNotes,
     setRoute,
     setStatusMessage,
-    saveNote: noteService.saveNote,
+    noteService,
     router,
+    notifyNoteListRevision: incrementNoteListRevision,
   });
 
   const { handleImportMarkdown, handleExportMarkdown } = useMarkdownTransfer({
     noteService,
-    notes,
-    setNotesFromStorage,
+    notifyNoteListRevision: incrementNoteListRevision,
     showTemporaryStatus,
   });
 
@@ -202,14 +233,15 @@ export function useAppController({
   const handleDeleteNote = useDeleteNote({
     defaultPage: DEFAULT_PAGE_PATH,
     deriveTitle,
-    notes,
     pendingDeletionPath,
     pendingSave,
     sanitizeNoteForSave,
     selectedNotePath,
-    setNotes,
     setPendingDeletionPath,
     setPendingSave,
+    setCurrentNote,
+    incrementNoteRevision,
+    incrementNoteListRevision,
     setRoute,
     setStatusMessage,
     noteService,
@@ -225,8 +257,8 @@ export function useAppController({
   }, []);
 
   return {
-    notes,
     noteRevision,
+    noteListRevision,
     route,
     selectedNotePath,
     pendingDeletionPath,
@@ -280,13 +312,11 @@ function useTemporaryStatus(initialMessage: string): {
 
 function useMarkdownTransfer({
   noteService,
-  notes,
-  setNotesFromStorage,
+  notifyNoteListRevision,
   showTemporaryStatus,
 }: {
   noteService: NoteService;
-  notes: Note[];
-  setNotesFromStorage: (next: Note[]) => void;
+  notifyNoteListRevision: () => void;
   showTemporaryStatus: (message: string) => void;
 }): {
   handleImportMarkdown: () => Promise<void>;
@@ -296,7 +326,7 @@ function useMarkdownTransfer({
     try {
       const result = await noteService.importFromDirectory();
       if (result.status === "success") {
-        setNotesFromStorage(result.notes);
+        notifyNoteListRevision();
         showTemporaryStatus(`Imported ${result.importedCount} notes from folder`);
         return;
       }
@@ -313,11 +343,12 @@ function useMarkdownTransfer({
       console.error("Failed to import Markdown notes", error);
       showTemporaryStatus("Failed to import Markdown notes");
     }
-  }, [noteService, setNotesFromStorage, showTemporaryStatus]);
+  }, [noteService, notifyNoteListRevision, showTemporaryStatus]);
 
   const handleExportMarkdown = useCallback(async () => {
     try {
-      const result = await noteService.exportToDirectory(notes);
+      const allNotes = await noteService.loadNotes();
+      const result = await noteService.exportToDirectory(allNotes);
       if (result.status === "success") {
         showTemporaryStatus(`Exported ${result.exportedCount} notes to folder`);
         return;
@@ -335,7 +366,7 @@ function useMarkdownTransfer({
       console.error("Failed to export Markdown notes", error);
       showTemporaryStatus("Failed to export Markdown notes");
     }
-  }, [noteService, notes, showTemporaryStatus]);
+  }, [noteService, showTemporaryStatus]);
 
   return { handleImportMarkdown, handleExportMarkdown };
 }

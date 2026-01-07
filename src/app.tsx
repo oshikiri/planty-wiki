@@ -24,8 +24,8 @@ type AppProps = {
  */
 export function App({ noteService, queryService, router }: AppProps) {
   const {
-    notes,
     noteRevision,
+    noteListRevision,
     route,
     selectedNotePath,
     pendingDeletionPath,
@@ -50,7 +50,8 @@ export function App({ noteService, queryService, router }: AppProps) {
     <div class={styles.app}>
       <main class={styles.appMain}>
         <Sidebar
-          notes={notes}
+          noteService={noteService}
+          noteListRevision={noteListRevision}
           selectedPath={selectedNotePath}
           onSelectPath={handleSelectPath}
           onOpenQuery={handleOpenQuery}

@@ -2,10 +2,12 @@ import type { Ref } from "preact";
 import { useCallback, useEffect, useRef, useState } from "preact/hooks";
 
 import styles from "./sidebar.module.css";
-import type { Note } from "../types/note";
+import type { Note, NoteSummary } from "../types/note";
+import type { NoteService } from "../services/note-service";
 
 type SidebarProps = {
-  notes: Note[];
+  noteService: NoteService;
+  noteListRevision: number;
   selectedPath: string | null;
   onSelectPath: (path: string) => void;
   onOpenQuery: () => void;
@@ -38,6 +40,7 @@ type ContextMenuState = {
  * @returns JSX for the sidebar UI
  */
 export function Sidebar(props: SidebarProps) {
+  const notes = useSidebarNotes(props.noteService, props.noteListRevision);
   const contextMenu = useSidebarContextMenu(props.onSelectPath, props.onDeleteNote);
   return (
     <nav class={styles.sidebar} ref={contextMenu.containerRef}>
@@ -47,7 +50,7 @@ export function Sidebar(props: SidebarProps) {
         onOpenQuery={props.onOpenQuery}
       />
       <SidebarList
-        notes={props.notes}
+        notes={notes}
         selectedPath={props.selectedPath}
         onSelectPath={props.onSelectPath}
         onContextMenu={contextMenu.handleContextMenu}
@@ -135,7 +138,7 @@ type SidebarContextMenuProps = {
 };
 
 type SidebarListProps = {
-  notes: Note[];
+  notes: NoteSummary[];
   selectedPath: string | null;
   onSelectPath: (path: string) => void;
   onContextMenu: (event: MouseEvent, path: string) => void;
@@ -174,7 +177,7 @@ function SidebarListSection({
   keyPrefix,
 }: {
   title: string;
-  notes: Note[];
+  notes: NoteSummary[];
   selectedPath: string | null;
   onSelectPath: (path: string) => void;
   onContextMenu: (event: MouseEvent, path: string) => void;
@@ -205,7 +208,7 @@ function SidebarListSection({
   );
 }
 
-function partitionNotes(notes: Note[]) {
+function partitionNotes(notes: NoteSummary[]) {
   const sorted = [...notes].sort((a, b) => a.title.localeCompare(b.title));
   const recent = [...notes]
     .sort((a, b) => {
@@ -313,4 +316,29 @@ function useSidebarContextMenu(onOpen: (path: string) => void, onDelete: (path: 
     handleMenuOpen,
     handleMenuDelete,
   };
+}
+
+function useSidebarNotes(noteService: NoteService, revision: number): NoteSummary[] {
+  const [notes, setNotes] = useState<NoteSummary[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    noteService
+      .loadNoteSummaries()
+      .then((summaries) => {
+        if (cancelled) {
+          return;
+        }
+        setNotes(summaries);
+      })
+      .catch((error) => {
+        console.error("Failed to load note summaries", error);
+        if (!cancelled) {
+          setNotes([]);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [noteService, revision]);
+  return notes;
 }

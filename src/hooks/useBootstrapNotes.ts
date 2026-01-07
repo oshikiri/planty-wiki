@@ -7,16 +7,15 @@ import type { Route } from "../navigation/route";
 import { bootstrapNotes } from "../usecases/bootstrapNotes";
 import type { AppRoute, NoteStoragePort } from "../usecases/ports";
 
-type SetNotesFromStorage = (next: Note[]) => void;
-
 export type UseBootstrapNotesParams = {
   defaultPage: string;
   deriveTitle: (path: string) => string;
   sanitizeNoteForSave: (note: Note) => Note;
-  setNotes: Dispatch<StateUpdater<Note[]>>;
-  setNotesFromStorage: SetNotesFromStorage;
   setRoute: Dispatch<StateUpdater<Route>>;
   setStatusMessage: Dispatch<StateUpdater<string>>;
+  setCurrentNote: Dispatch<StateUpdater<Note | null>>;
+  incrementNoteRevision: () => void;
+  incrementNoteListRevision: () => void;
   noteService: NoteService;
   router: Router;
 };
@@ -32,10 +31,11 @@ export function useBootstrapNotes(params: UseBootstrapNotesParams) {
     defaultPage,
     deriveTitle,
     sanitizeNoteForSave,
-    setNotes,
-    setNotesFromStorage,
     setRoute,
     setStatusMessage,
+    setCurrentNote,
+    incrementNoteRevision,
+    incrementNoteListRevision,
     noteService,
     router,
   } = params;
@@ -53,8 +53,12 @@ export function useBootstrapNotes(params: UseBootstrapNotesParams) {
         if (abortController.signal.aborted || !result) {
           return;
         }
-        setNotes(result.notes);
-        setNotesFromStorage(result.notesFromStorage);
+        if (result.initialNote) {
+          setCurrentNote(result.initialNote);
+          incrementNoteRevision();
+        } else {
+          setCurrentNote(null);
+        }
         const nextRoute = mapAppRouteToNavigation(result.route);
         setRoute(nextRoute);
         if (result.shouldNavigate) {
@@ -62,6 +66,9 @@ export function useBootstrapNotes(params: UseBootstrapNotesParams) {
         }
         if (result.statusMessage) {
           setStatusMessage(result.statusMessage);
+        }
+        if (result.storageUpdated) {
+          incrementNoteListRevision();
         }
       })
       .catch((error) => {
@@ -78,10 +85,11 @@ export function useBootstrapNotes(params: UseBootstrapNotesParams) {
     defaultPage,
     deriveTitle,
     sanitizeNoteForSave,
-    setNotes,
-    setNotesFromStorage,
     setRoute,
     setStatusMessage,
+    setCurrentNote,
+    incrementNoteRevision,
+    incrementNoteListRevision,
     noteService,
     router,
   ]);
@@ -106,6 +114,8 @@ function mapAppRouteToNavigation(route: AppRoute): Route {
 
 function createNoteStoragePort(noteService: NoteService): NoteStoragePort {
   return {
+    loadNoteSummaries: () => noteService.loadNoteSummaries(),
+    loadNote: (path: Note["path"]) => noteService.loadNote(path),
     loadNotes: () => noteService.loadNotes(),
     saveNote: (note: Note) => noteService.saveNote(note),
     deleteNote: (path: Note["path"]) => noteService.deleteNote(path),

@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useState } from "preact/hooks";
+import { useEffect, useState } from "preact/hooks";
 
-import { extractWikiLinks } from "../navigation";
 import type { Note } from "../types/note";
 import type { NoteService } from "../services/note-service";
 
@@ -11,25 +10,19 @@ export type Backlink = {
 };
 
 /**
- * Retrieves pages that reference the current note, delegating to the storage index when available and falling back to a local scan otherwise.
+ * Retrieves pages that reference the current note using the storage backlink index.
  *
- * @param notes List of notes held on the client
  * @param current Note currently being edited
  * @param noteService NoteService that exposes backlink APIs (optional)
  * @returns Array of Backlink objects
  */
-export function useBacklinks(notes: Note[], current: Note, noteService?: NoteService): Backlink[] {
+export function useBacklinks(current: Note, noteService?: NoteService): Backlink[] {
   const targetPath = current.path;
-  const canUseIndexedBacklinks = Boolean(noteService?.listBacklinks);
-  const [indexedBacklinks, setIndexedBacklinks] = useState<Backlink[] | null>(null);
-  const fallbackBacklinks = useMemo(
-    () => (canUseIndexedBacklinks ? [] : buildBacklinksFromNotes(notes, targetPath)),
-    [canUseIndexedBacklinks, notes, targetPath],
-  );
+  const [backlinks, setBacklinks] = useState<Backlink[]>([]);
 
   useEffect(() => {
-    if (!canUseIndexedBacklinks || !noteService?.listBacklinks) {
-      setIndexedBacklinks(null);
+    if (!noteService?.listBacklinks || !targetPath) {
+      setBacklinks([]);
       return;
     }
     let isCancelled = false;
@@ -37,81 +30,53 @@ export function useBacklinks(notes: Note[], current: Note, noteService?: NoteSer
       try {
         const linkingNotes = await noteService.listBacklinks(targetPath);
         if (isCancelled) return;
-        setIndexedBacklinks(buildBacklinksFromNotes(linkingNotes, targetPath));
+        setBacklinks(
+          linkingNotes.map((note) => ({
+            path: note.path,
+            title: note.title,
+            snippet: buildSnippet(note.body, current.title),
+          })),
+        );
       } catch (error) {
-        console.error("Failed to load backlinks from storage. Falling back to local scan.", error);
+        console.error("Failed to load backlinks from storage.", error);
         if (isCancelled) return;
-        setIndexedBacklinks(buildBacklinksFromNotes(notes, targetPath));
+        setBacklinks([]);
       }
     };
     fetchBacklinks();
     return () => {
       isCancelled = true;
     };
-  }, [canUseIndexedBacklinks, notes, noteService, targetPath]);
+  }, [current.title, noteService, targetPath]);
 
-  if (canUseIndexedBacklinks && indexedBacklinks) {
-    return indexedBacklinks;
-  }
-  return fallbackBacklinks;
+  return backlinks;
 }
 
-function buildBacklinksFromNotes(sourceNotes: Note[], targetPath: string): Backlink[] {
-  if (!sourceNotes.length) {
-    return [];
-  }
-  const results: Backlink[] = [];
-  for (const note of sourceNotes) {
-    if (note.path === targetPath) {
-      continue;
-    }
-    if (!note.body.includes("[[")) {
-      continue;
-    }
-    const links = extractWikiLinks(note.body);
-    const match = links.find((link) => link.path === targetPath);
-    if (!match) {
-      continue;
-    }
-    const snippet = createSnippet(note.body, match.display);
-    results.push({
-      path: note.path,
-      title: note.title,
-      snippet,
-    });
-  }
-  return results;
-}
-
-function createSnippet(body: string, display: string): string {
+function buildSnippet(body: string, display: string): string {
   const marker = `[[${display}]]`;
   const index = body.indexOf(marker);
   if (index === -1) {
-    const snippet = body.slice(0, 120);
-    return snippet.replace(/\s+/g, " ").trim();
+    return body.slice(0, 120).replace(/\s+/g, " ").trim();
   }
-  const start = findParagraphStart(body, index);
-  const end = findParagraphEnd(body, index + marker.length);
-  const snippet = body.slice(start, end);
-  return snippet.trim();
+  const start = findParagraphBoundary(body, index, "start");
+  const end = findParagraphBoundary(body, index + marker.length, "end");
+  return body.slice(start, end).trim();
 }
 
-function findParagraphStart(body: string, index: number): number {
+function findParagraphBoundary(body: string, position: number, type: "start" | "end"): number {
   const blankLinePattern = /\r?\n\r?\n/g;
-  let lastMatchEnd = 0;
-  while (true) {
-    const match = blankLinePattern.exec(body);
-    if (!match || match.index >= index) {
-      break;
+  if (type === "start") {
+    let lastMatchEnd = 0;
+    while (true) {
+      const match = blankLinePattern.exec(body);
+      if (!match || match.index >= position) {
+        break;
+      }
+      lastMatchEnd = match.index + match[0].length;
     }
-    lastMatchEnd = match.index + match[0].length;
+    return lastMatchEnd;
   }
-  return lastMatchEnd;
-}
-
-function findParagraphEnd(body: string, offset: number): number {
-  const blankLinePattern = /\r?\n\r?\n/g;
-  blankLinePattern.lastIndex = offset;
+  blankLinePattern.lastIndex = position;
   const match = blankLinePattern.exec(body);
   return match ? match.index : body.length;
 }

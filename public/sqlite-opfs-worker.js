@@ -29,6 +29,16 @@ self.onmessage = async function (event) {
       return;
     }
 
+    if (type === "loadNoteSummaries") {
+      handleLoadNoteSummaries(db, id);
+      return;
+    }
+
+    if (type === "loadNote") {
+      handleLoadNote(db, id, payload);
+      return;
+    }
+
     if (type === "loadNotes") {
       handleLoadNotes(db, id);
       return;
@@ -128,6 +138,52 @@ function handleLoadNotes(db, id) {
     },
   });
   postIfNotCancelled(id, { id: id, ok: true, result: rows });
+}
+
+function handleLoadNoteSummaries(db, id) {
+  var rows = [];
+  db.exec({
+    sql: "SELECT path, title, updated_at AS updatedAt FROM pages ORDER BY path",
+    rowMode: "object",
+    callback: function (row) {
+      if (!row || typeof row !== "object") return;
+      rows.push({
+        path: String(row.path || ""),
+        title: String(row.title || ""),
+        updatedAt: typeof row.updatedAt === "string" ? row.updatedAt : undefined,
+      });
+    },
+  });
+  postIfNotCancelled(id, { id: id, ok: true, result: rows });
+}
+
+function handleLoadNote(db, id, payload) {
+  var path = "";
+  if (payload && typeof payload === "object" && typeof payload.path === "string") {
+    path = payload.path;
+  } else {
+    path = String(payload || "");
+  }
+  if (!path) {
+    postIfNotCancelled(id, { id: id, ok: true, result: null });
+    return;
+  }
+  var note = null;
+  db.exec({
+    sql: "SELECT path, title, body, updated_at AS updatedAt FROM pages WHERE path = $path LIMIT 1",
+    rowMode: "object",
+    bind: { $path: path },
+    callback: function (row) {
+      if (!row || typeof row !== "object") return;
+      note = {
+        path: String(row.path || ""),
+        title: String(row.title || ""),
+        body: String(row.body || ""),
+        updatedAt: typeof row.updatedAt === "string" ? row.updatedAt : undefined,
+      };
+    },
+  });
+  postIfNotCancelled(id, { id: id, ok: true, result: note });
 }
 
 function handleSaveNote(db, id, payload) {

@@ -6,55 +6,53 @@ type SelectOrCreateNoteParams = {
   path: string;
   defaultPage: string;
   deriveTitle: (path: string) => string;
-  notes: Note[];
   sanitizeNoteForSave: (note: Note) => Note;
-  noteStorage: Pick<NoteStoragePort, "saveNote">;
+  noteStorage: Pick<NoteStoragePort, "saveNote" | "loadNote">;
 };
 
 export type SelectOrCreateNoteResult = {
-  notes: Note[];
-  draftBody: string;
+  note: Note;
   routePath: string;
   statusMessage?: string;
+  created: boolean;
 };
 
 /**
  * Normalizes the given path and performs selection or creation before routing to the note.
  *
- * @param params Dependencies required for the transition such as note lists and save functions
- * @returns Next note state, draft body, and route path
+ * @param params Dependencies required for the transition such as storage access and sanitizers
+ * @returns Loaded note, target route path, and optional status
  */
 export async function selectOrCreateNote({
   path,
   defaultPage,
   deriveTitle,
-  notes,
   sanitizeNoteForSave,
   noteStorage,
 }: SelectOrCreateNoteParams): Promise<SelectOrCreateNoteResult> {
   const normalized = path ? normalizePath(path) : defaultPage;
-  const existingNote = notes.find((note) => note.path === normalized);
-  if (!existingNote) {
-    const title = deriveTitle(normalized);
-    const newNote = sanitizeNoteForSave({ path: normalized, title, body: "" });
-    const nextNotes = [...notes, newNote];
-    let statusMessage: string | undefined;
-    try {
-      await noteStorage.saveNote(newNote);
-    } catch (error) {
-      console.error("Failed to create note via selectOrCreateNote", error);
-      statusMessage = "Failed to create note";
-    }
-    return {
-      notes: nextNotes,
-      draftBody: newNote.body,
-      routePath: normalized,
-      statusMessage,
-    };
+  const existing = await noteStorage.loadNote(normalized);
+  if (existing) {
+    return { note: existing, routePath: normalized, created: false };
+  }
+  const now = new Date().toISOString();
+  const newNote = sanitizeNoteForSave({
+    path: normalized,
+    title: deriveTitle(normalized),
+    body: "",
+    updatedAt: now,
+  });
+  let statusMessage: string | undefined;
+  try {
+    await noteStorage.saveNote(newNote);
+  } catch (error) {
+    console.error("Failed to create note via selectOrCreateNote", error);
+    statusMessage = "Failed to create note";
   }
   return {
-    notes,
-    draftBody: existingNote.body,
+    note: newNote,
     routePath: normalized,
+    statusMessage,
+    created: true,
   };
 }

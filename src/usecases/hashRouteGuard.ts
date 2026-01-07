@@ -1,19 +1,18 @@
 import type { Note } from "../domain/note";
-import type { AppRoute } from "./ports";
+import type { AppRoute, NoteStoragePort } from "./ports";
 
 export type HashRouteGuardParams = {
   deriveTitle: (path: string) => string;
   sanitizeNoteForSave: (note: Note) => Note;
-  notes: Note[];
-  saveNote: (note: Note) => Promise<void>;
+  noteStorage: Pick<NoteStoragePort, "loadNote" | "saveNote">;
   getCurrentRoute: () => AppRoute | null;
   signal?: AbortSignal;
 };
 
 export type HashRouteGuardResult = {
-  notes?: Note[];
   route?: AppRoute;
   statusMessage?: string;
+  storageUpdated?: boolean;
 };
 
 /**
@@ -22,8 +21,7 @@ export type HashRouteGuardResult = {
 export async function handleHashRouteChange({
   deriveTitle,
   sanitizeNoteForSave,
-  notes,
-  saveNote,
+  noteStorage,
   getCurrentRoute,
   signal,
 }: HashRouteGuardParams): Promise<HashRouteGuardResult | null> {
@@ -32,17 +30,25 @@ export async function handleHashRouteChange({
     return null;
   }
   if (routeFromHash.kind === "query") {
-    return { route: routeFromHash };
+    return { route: routeFromHash, storageUpdated: false };
   }
-  const exists = notes.some((note) => note.path === routeFromHash.path);
+  const exists = await noteStorage.loadNote(routeFromHash.path);
   if (exists) {
-    return { route: routeFromHash };
+    return { route: routeFromHash, storageUpdated: false };
   }
   const title = deriveTitle(routeFromHash.path);
-  const newNote = sanitizeNoteForSave({ path: routeFromHash.path, title, body: "" });
+  const now = new Date().toISOString();
+  const newNote = sanitizeNoteForSave({
+    path: routeFromHash.path,
+    title,
+    body: "",
+    updatedAt: now,
+  });
   let statusMessage: string | undefined;
+  let storageUpdated = false;
   try {
-    await saveNote(newNote);
+    await noteStorage.saveNote(newNote);
+    storageUpdated = true;
   } catch (error) {
     if (!signal?.aborted) {
       console.error("Failed to create note via hashchange", error);
@@ -50,8 +56,8 @@ export async function handleHashRouteChange({
     }
   }
   return {
-    notes: [...notes, newNote],
     route: routeFromHash,
     statusMessage,
+    storageUpdated,
   };
 }

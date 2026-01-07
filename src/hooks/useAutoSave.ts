@@ -6,9 +6,10 @@ type UseAutoSaveParams = {
   pendingSave: PendingSave | null;
   sanitizeNoteForSave: (note: Note) => Note;
   setPendingSave: Dispatch<StateUpdater<PendingSave | null>>;
-  setNotes: Dispatch<StateUpdater<Note[]>>;
+  setCurrentNote: Dispatch<StateUpdater<Note | null>>;
   saveNote: (note: Note) => Promise<void>;
   setStatusMessage: Dispatch<StateUpdater<string>>;
+  notifyNotePersisted: () => void;
 };
 
 /**
@@ -22,9 +23,10 @@ export function useAutoSave({
   pendingSave,
   sanitizeNoteForSave,
   setPendingSave,
-  setNotes,
+  setCurrentNote,
   saveNote,
   setStatusMessage,
+  notifyNotePersisted,
 }: UseAutoSaveParams) {
   // Keep failed saves in retrySnapshot, independent from pendingSave, so they can be retried once storage recovers.
   const [retrySnapshot, setRetrySnapshot] = useState<PendingSave | null>(null);
@@ -35,19 +37,21 @@ export function useAutoSave({
       isRetrying: Boolean(retrySnapshot),
       sanitizeNoteForSave,
       setPendingSave,
-      setNotes,
+      setCurrentNote,
       saveNote,
       setStatusMessage,
       setRetrySnapshot,
+      notifyNotePersisted,
     });
   }, [
     pendingSave,
     retrySnapshot,
     sanitizeNoteForSave,
-    setNotes,
+    setCurrentNote,
     setPendingSave,
     setStatusMessage,
     saveNote,
+    notifyNotePersisted,
   ]);
 }
 
@@ -59,10 +63,11 @@ type ScheduleParams = {
   isRetrying: boolean;
   sanitizeNoteForSave: (note: Note) => Note;
   setPendingSave: Dispatch<StateUpdater<PendingSave | null>>;
-  setNotes: Dispatch<StateUpdater<Note[]>>;
+  setCurrentNote: Dispatch<StateUpdater<Note | null>>;
   saveNote: (note: Note) => Promise<void>;
   setStatusMessage: Dispatch<StateUpdater<string>>;
   setRetrySnapshot: Dispatch<StateUpdater<PendingSave | null>>;
+  notifyNotePersisted: () => void;
 };
 
 /**
@@ -97,10 +102,11 @@ async function runAutoSaveTask({
   isRetrying,
   sanitizeNoteForSave,
   setPendingSave,
-  setNotes,
+  setCurrentNote,
   saveNote,
   setStatusMessage,
   setRetrySnapshot,
+  notifyNotePersisted,
 }: TaskParams) {
   if (!isRetrying) {
     clearPendingSnapshot(snapshot, setPendingSave);
@@ -111,9 +117,15 @@ async function runAutoSaveTask({
     body: snapshot.body,
     updatedAt: new Date().toISOString(),
   });
-  setNotes((prev) => upsertNote(prev, nextNote));
+  setCurrentNote((current) => {
+    if (!current || current.path !== nextNote.path) {
+      return current;
+    }
+    return nextNote;
+  });
   try {
     await saveNote(nextNote);
+    notifyNotePersisted();
     setStatusMessage("Auto-saved changes");
     if (isRetrying) {
       clearRetrySnapshot(snapshot, setRetrySnapshot);
@@ -123,16 +135,6 @@ async function runAutoSaveTask({
     setStatusMessage("Failed to auto-save changes");
     queueSnapshotForRetry(snapshot, setRetrySnapshot);
   }
-}
-
-function upsertNote(notes: Note[], nextNote: Note): Note[] {
-  const index = notes.findIndex((note) => note.path === nextNote.path);
-  if (index === -1) {
-    return [...notes, nextNote];
-  }
-  const copy = [...notes];
-  copy[index] = nextNote;
-  return copy;
 }
 
 function clearPendingSnapshot(

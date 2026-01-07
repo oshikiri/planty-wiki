@@ -1,10 +1,9 @@
 import { useCallback, useRef, useState } from "preact/hooks";
 
-import type { Note, SearchResult } from "../types/note";
+import type { SearchResult } from "../types/note";
 
 type UseNoteSearchArgs = {
   searchNotes?: (query: string) => Promise<SearchResult[]>;
-  notes: Note[];
 };
 
 const SEARCH_DEBOUNCE_MS = 300;
@@ -14,10 +13,10 @@ type TimeoutRef = { current: number | null };
 /**
  * Debounces client/service note searches while returning the query, latest results, and handler.
  *
- * @param params Object that bundles the notes array and optional searchNotes function
+ * @param params Object that bundles the optional searchNotes function
  * @returns Query string, results, and the search handler
  */
-export function useNoteSearch({ searchNotes, notes }: UseNoteSearchArgs) {
+export function useNoteSearch({ searchNotes }: UseNoteSearchArgs) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[] | null>(null);
   const debounceRef = useRef<number | null>(null);
@@ -35,14 +34,13 @@ export function useNoteSearch({ searchNotes, notes }: UseNoteSearchArgs) {
           requestId,
           latestRequestRef,
           searchNotes,
-          notes,
           setResults,
         }).catch((error) => {
           console.warn("Unexpected error while searching notes", error);
         });
       }, SEARCH_DEBOUNCE_MS);
     },
-    [notes, searchNotes],
+    [searchNotes],
   );
 
   return { query, results, handleSearch };
@@ -53,7 +51,6 @@ type ScheduledSearchArgs = {
   requestId: number;
   latestRequestRef: NumberRef;
   searchNotes?: (query: string) => Promise<SearchResult[]>;
-  notes: Note[];
   setResults: (results: SearchResult[] | null) => void;
 };
 
@@ -62,7 +59,6 @@ async function runScheduledSearch({
   requestId,
   latestRequestRef,
   searchNotes,
-  notes,
   setResults,
 }: ScheduledSearchArgs) {
   const trimmed = nextQuery.trim();
@@ -76,11 +72,7 @@ async function runScheduledSearch({
   if (requestId !== latestRequestRef.current) {
     return;
   }
-  if (remoteResults?.length) {
-    setResults(remoteResults);
-    return;
-  }
-  setResults(filterNotes(notes, trimmed));
+  setResults(remoteResults ?? []);
 }
 
 async function tryRemoteSearch(
@@ -93,19 +85,9 @@ async function tryRemoteSearch(
   try {
     return await searchNotes(query);
   } catch (error) {
-    console.warn("Failed to search notes via service; falling back to client-side filter", error);
+    console.warn("Failed to search notes via service", error);
     return null;
   }
-}
-
-function filterNotes(notes: Note[], query: string): SearchResult[] {
-  return notes
-    .filter((note) => note.title.includes(query) || note.body.includes(query))
-    .map((note) => ({
-      path: note.path,
-      title: note.title,
-      snippet: "",
-    }));
 }
 
 function resetDebounce(ref: TimeoutRef) {

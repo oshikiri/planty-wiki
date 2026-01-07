@@ -1,5 +1,5 @@
 import type { NoteStorage } from "./index";
-import type { Note, SearchResult } from "../types/note";
+import type { Note, NoteSummary, SearchResult } from "../types/note";
 import { callWorker } from "./sqlite-worker-client";
 
 /**
@@ -9,6 +9,36 @@ import { callWorker } from "./sqlite-worker-client";
  */
 export function createSqliteStorage(): NoteStorage {
   return {
+    async loadNoteSummaries(): Promise<NoteSummary[]> {
+      try {
+        const result =
+          (await callWorker<NoteSummary[]>("loadNoteSummaries"))?.filter(Boolean) ?? [];
+        return result;
+      } catch (error) {
+        console.error("Failed to load note summaries from SQLite worker.", error);
+        throw error;
+      }
+    },
+    async loadNote(path: Note["path"]): Promise<Note | null> {
+      if (!path) {
+        return null;
+      }
+      try {
+        const result = await callWorker<Note | null>("loadNote", { path });
+        if (!result) {
+          return null;
+        }
+        return {
+          path: result.path,
+          title: result.title,
+          body: result.body,
+          updatedAt: result.updatedAt,
+        };
+      } catch (error) {
+        console.error("Failed to load note from SQLite worker.", error);
+        throw error;
+      }
+    },
     async loadNotes(): Promise<Note[]> {
       try {
         const result = (await callWorker<Note[]>("loadNotes")) ?? [];

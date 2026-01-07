@@ -1,4 +1,4 @@
-import type { Note } from "../domain/note";
+import type { Note, NoteSummary } from "../domain/note";
 import type { NoteStoragePort, AppRoute } from "./ports";
 
 export type BootstrapNotesParams = {
@@ -11,15 +11,15 @@ export type BootstrapNotesParams = {
 };
 
 export type BootstrapNotesResult = {
-  notes: Note[];
-  notesFromStorage: Note[];
   route: AppRoute;
   shouldNavigate: boolean;
+  initialNote: Note | null;
   statusMessage?: string;
+  storageUpdated: boolean;
 };
 
 /**
- * Loads notes during the initial boot, determines routing, and creates notes when required.
+ * Loads note summaries during the initial boot, determines routing, and fetches the first note body when required.
  */
 export async function bootstrapNotes({
   defaultPage,
@@ -30,42 +30,47 @@ export async function bootstrapNotes({
   signal,
 }: BootstrapNotesParams): Promise<BootstrapNotesResult> {
   try {
-    const loaded = await noteStorage.loadNotes();
+    const summaries = await noteStorage.loadNoteSummaries();
+    let storageUpdated = false;
     if (signal?.aborted) {
       return createAbortedResult(defaultPage);
     }
     const routeFromHash = getCurrentRoute();
     if (routeFromHash?.kind === "query") {
       return {
-        notes: loaded,
-        notesFromStorage: loaded,
         route: routeFromHash,
         shouldNavigate: false,
+        initialNote: null,
+        storageUpdated: false,
       };
     }
     if (routeFromHash?.kind === "note") {
       const ensured = await ensureNoteExists({
         normalized: routeFromHash.path,
-        notes: loaded,
+        summaries,
         deriveTitle,
         sanitizeNoteForSave,
         noteStorage,
         signal,
       });
+      storageUpdated = storageUpdated || ensured.storageUpdated;
+      const resolvedNote = await noteStorage.loadNote(routeFromHash.path);
       return {
-        notes: ensured.notes,
-        notesFromStorage: loaded,
         route: routeFromHash,
         shouldNavigate: false,
+        initialNote: resolvedNote,
         statusMessage: ensured.statusMessage,
+        storageUpdated,
       };
     }
-    if (loaded[0]) {
+    if (summaries[0]) {
+      const route: AppRoute = { kind: "note", path: summaries[0].path };
+      const initialNote = await noteStorage.loadNote(route.path);
       return {
-        notes: loaded,
-        notesFromStorage: loaded,
-        route: { kind: "note", path: loaded[0].path },
+        route,
         shouldNavigate: true,
+        initialNote,
+        storageUpdated: false,
       };
     }
     const created = await createDefaultNote({
@@ -75,12 +80,13 @@ export async function bootstrapNotes({
       noteStorage,
       signal,
     });
+    storageUpdated = storageUpdated || created.storageUpdated;
     return {
-      notes: created.notes,
-      notesFromStorage: loaded,
       route: { kind: "note", path: defaultPage },
       shouldNavigate: true,
+      initialNote: created.note,
       statusMessage: created.statusMessage,
+      storageUpdated,
     };
   } catch (error) {
     if (signal?.aborted) {
@@ -88,18 +94,18 @@ export async function bootstrapNotes({
     }
     console.error("Failed to bootstrap notes from storage", error);
     return {
-      notes: [],
-      notesFromStorage: [],
       route: { kind: "note", path: defaultPage },
       shouldNavigate: true,
+      initialNote: null,
       statusMessage: "Failed to load notes, starting from an empty state",
+      storageUpdated: false,
     };
   }
 }
 
 type EnsureNoteExistsParams = {
   normalized: string;
-  notes: Note[];
+  summaries: NoteSummary[];
   deriveTitle: (path: string) => string;
   sanitizeNoteForSave: (note: Note) => Note;
   noteStorage: NoteStoragePort;
@@ -107,38 +113,41 @@ type EnsureNoteExistsParams = {
 };
 
 type EnsureNoteExistsResult = {
-  notes: Note[];
+  storageUpdated: boolean;
   statusMessage?: string;
 };
 
 async function ensureNoteExists({
   normalized,
-  notes,
+  summaries,
   deriveTitle,
   sanitizeNoteForSave,
   noteStorage,
   signal,
 }: EnsureNoteExistsParams): Promise<EnsureNoteExistsResult> {
-  const exists = notes.some((note) => note.path === normalized);
+  const exists = summaries.some((summary) => summary.path === normalized);
   if (exists || signal?.aborted) {
-    return { notes };
+    return { storageUpdated: false };
   }
+  const now = new Date().toISOString();
   const newNote = sanitizeNoteForSave({
     path: normalized,
     title: deriveTitle(normalized),
     body: "",
+    updatedAt: now,
   });
-  const nextNotes = [...notes, newNote];
   let statusMessage: string | undefined;
+  let storageUpdated = false;
   try {
     await noteStorage.saveNote(newNote);
+    storageUpdated = true;
   } catch (error) {
     console.error("Failed to create note via bootstrap hash handling", error);
     if (!signal?.aborted) {
       statusMessage = "Failed to create note from hash";
     }
   }
-  return { notes: nextNotes, statusMessage };
+  return { storageUpdated, statusMessage };
 }
 
 type CreateDefaultNoteParams = {
@@ -150,8 +159,9 @@ type CreateDefaultNoteParams = {
 };
 
 type CreateDefaultNoteResult = {
-  notes: Note[];
+  note: Note | null;
   statusMessage?: string;
+  storageUpdated: boolean;
 };
 
 async function createDefaultNote({
@@ -161,28 +171,32 @@ async function createDefaultNote({
   noteStorage,
   signal,
 }: CreateDefaultNoteParams): Promise<CreateDefaultNoteResult> {
+  const now = new Date().toISOString();
   const fallbackNote = sanitizeNoteForSave({
     path: defaultPage,
     title: deriveTitle(defaultPage),
     body: "",
+    updatedAt: now,
   });
   let statusMessage: string | undefined;
+  let storageUpdated = false;
   try {
     await noteStorage.saveNote(fallbackNote);
+    storageUpdated = true;
   } catch (error) {
     if (!signal?.aborted) {
       console.error("Failed to create default note during bootstrap", error);
       statusMessage = "Failed to create default note";
     }
   }
-  return { notes: [fallbackNote], statusMessage };
+  return { note: fallbackNote, statusMessage, storageUpdated };
 }
 
 function createAbortedResult(defaultPage: string): BootstrapNotesResult {
   return {
-    notes: [],
-    notesFromStorage: [],
     route: { kind: "note", path: defaultPage },
     shouldNavigate: false,
+    initialNote: null,
+    storageUpdated: false,
   };
 }

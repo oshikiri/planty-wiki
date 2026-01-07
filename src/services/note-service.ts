@@ -4,10 +4,12 @@ import {
   type ExportNotesResult,
   type ImportMarkdownResult,
 } from "../storage/file-bridge";
-import type { Note, SearchResult } from "../types/note";
+import type { Note, NoteSummary, SearchResult } from "../types/note";
 import type { NoteRepository } from "../domain/note-repository";
 
 export type NoteService = {
+  loadNoteSummaries: () => Promise<NoteSummary[]>;
+  loadNote: (path: Note["path"]) => Promise<Note | null>;
   loadNotes: () => Promise<Note[]>;
   saveNote: (note: Note) => Promise<void>;
   deleteNote: (path: Note["path"]) => Promise<void>;
@@ -25,6 +27,12 @@ export type NoteService = {
  */
 export function createNoteService(repository: NoteRepository): NoteService {
   return {
+    async loadNoteSummaries() {
+      return repository.loadSummaries();
+    },
+    async loadNote(path: Note["path"]) {
+      return repository.loadByPath(path);
+    },
     async loadNotes() {
       return repository.loadAll();
     },
@@ -63,6 +71,16 @@ export function createInMemoryNoteService(initialNotes: Note[] = []): NoteServic
 function createInMemoryRepository(initialNotes: Note[]): NoteRepository {
   let notes = [...initialNotes];
   return {
+    async loadSummaries() {
+      return notes.map((note) => ({
+        path: note.path,
+        title: note.title,
+        updatedAt: note.updatedAt,
+      }));
+    },
+    async loadByPath(path: Note["path"]) {
+      return notes.find((note) => note.path === path) ?? null;
+    },
     async loadAll() {
       return [...notes];
     },

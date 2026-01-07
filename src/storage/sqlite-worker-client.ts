@@ -1,5 +1,7 @@
 type WorkerRequestType =
   | "loadNotes"
+  | "loadNoteSummaries"
+  | "loadNote"
   | "saveNote"
   | "bulkSaveNotes"
   | "deleteNote"

@@ -9,10 +9,11 @@ import { selectOrCreateNote } from "../usecases/selectOrCreateNote";
 export type UseSelectPathHandlerParams = {
   defaultPage: string;
   deriveTitle: (path: string) => string;
-  notes: Note[];
   sanitizeNoteForSave: (note: Note) => Note;
   setDraftBody: Dispatch<StateUpdater<string>>;
-  setNotes: Dispatch<StateUpdater<Note[]>>;
+  setCurrentNote: Dispatch<StateUpdater<Note | null>>;
+  incrementNoteRevision: () => void;
+  incrementNoteListRevision: () => void;
   setRoute: Dispatch<StateUpdater<Route>>;
   setStatusMessage: Dispatch<StateUpdater<string>>;
   noteService: NoteService;
@@ -28,10 +29,11 @@ export type UseSelectPathHandlerParams = {
 export function useSelectPathHandler({
   defaultPage,
   deriveTitle,
-  notes,
   sanitizeNoteForSave,
   setDraftBody,
-  setNotes,
+  setCurrentNote,
+  incrementNoteRevision,
+  incrementNoteListRevision,
   setRoute,
   setStatusMessage,
   noteService,
@@ -43,23 +45,27 @@ export function useSelectPathHandler({
         path,
         defaultPage,
         deriveTitle,
-        notes,
         sanitizeNoteForSave,
         noteStorage: {
           saveNote: (note) => noteService.saveNote(note),
+          loadNote: (targetPath) => noteService.loadNote(targetPath),
         },
       })
         .then((result) => {
           if (!result) {
             return;
           }
-          setNotes(result.notes);
-          setDraftBody(result.draftBody);
+          setCurrentNote(result.note);
+          incrementNoteRevision();
+          setDraftBody(result.note.body);
           const nextRoute: Route = { type: "note", path: result.routePath };
           setRoute(nextRoute);
           router.navigate(nextRoute);
           if (result.statusMessage) {
             setStatusMessage(result.statusMessage);
+          }
+          if (result.created) {
+            incrementNoteListRevision();
           }
         })
         .catch((error) => {
@@ -70,10 +76,11 @@ export function useSelectPathHandler({
     [
       defaultPage,
       deriveTitle,
-      notes,
       sanitizeNoteForSave,
       setDraftBody,
-      setNotes,
+      setCurrentNote,
+      incrementNoteRevision,
+      incrementNoteListRevision,
       setStatusMessage,
       noteService,
       router,

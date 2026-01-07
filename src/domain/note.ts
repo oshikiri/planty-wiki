@@ -1,10 +1,13 @@
 import { normalizePath } from "./path";
 
-export interface Note {
+export interface NoteSummary {
   path: string;
   title: string;
-  body: string;
   updatedAt?: string;
+}
+
+export interface Note extends NoteSummary {
+  body: string;
 }
 
 export interface SearchResult {

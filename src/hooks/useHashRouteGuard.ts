@@ -1,20 +1,20 @@
-import { useEffect, type Dispatch, type MutableRef, type StateUpdater } from "preact/hooks";
+import { useEffect, type Dispatch, type StateUpdater } from "preact/hooks";
 
 import type { Note } from "../types/note";
 import type { Route } from "../navigation/route";
 import type { Router } from "../navigation/router";
 import { handleHashRouteChange } from "../usecases/hashRouteGuard";
 import type { AppRoute } from "../usecases/ports";
+import type { NoteService } from "../services/note-service";
 
 type UseHashRouteGuardParams = {
   deriveTitle: (path: string) => string;
   sanitizeNoteForSave: (note: Note) => Note;
-  setNotes: Dispatch<StateUpdater<Note[]>>;
   setRoute: Dispatch<StateUpdater<Route>>;
   setStatusMessage: Dispatch<StateUpdater<string>>;
-  saveNote: (note: Note) => Promise<void>;
-  notesRef: MutableRef<Note[]>;
+  noteService: NoteService;
   router: Router;
+  notifyNoteListRevision: () => void;
 };
 
 /**
@@ -26,12 +26,11 @@ type UseHashRouteGuardParams = {
 export function useHashRouteGuard({
   deriveTitle,
   sanitizeNoteForSave,
-  setNotes,
   setRoute,
   setStatusMessage,
-  saveNote,
-  notesRef,
+  noteService,
   router,
+  notifyNoteListRevision,
 }: UseHashRouteGuardParams) {
   useEffect(() => {
     const abortController = new AbortController();
@@ -40,8 +39,10 @@ export function useHashRouteGuard({
       handleHashRouteChange({
         deriveTitle,
         sanitizeNoteForSave,
-        notes: notesRef.current,
-        saveNote,
+        noteStorage: {
+          loadNote: (path) => noteService.loadNote(path),
+          saveNote: (note) => noteService.saveNote(note),
+        },
         getCurrentRoute: () => mapNavigationRouteToApp(router.getCurrentRoute()),
         signal: abortController.signal,
       })
@@ -49,14 +50,14 @@ export function useHashRouteGuard({
           if (!result || abortController.signal.aborted) {
             return;
           }
-          if (result.notes) {
-            setNotes(result.notes);
-          }
           if (result.route) {
             setRoute(mapAppRouteToNavigation(result.route));
           }
           if (result.statusMessage) {
             setStatusMessage(result.statusMessage);
+          }
+          if (result.storageUpdated) {
+            notifyNoteListRevision();
           }
         })
         .catch((error) => {
@@ -76,13 +77,12 @@ export function useHashRouteGuard({
     };
   }, [
     deriveTitle,
-    notesRef,
     router,
     sanitizeNoteForSave,
-    setNotes,
     setRoute,
     setStatusMessage,
-    saveNote,
+    noteService,
+    notifyNoteListRevision,
   ]);
 }
 
