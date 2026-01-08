@@ -12,7 +12,6 @@ export type Router = {
  * @returns Router that listens to hashchange events
  */
 export function createHashRouter(): Router {
-  const getCurrentRoute = () => parseHashLocation(window.location.hash);
   const listeners = new Set<(route: Route | null) => void>();
   const handleHashChange = () => {
     const nextRoute = parseHashLocation(window.location.hash);
@@ -24,7 +23,9 @@ export function createHashRouter(): Router {
   window.addEventListener("hashchange", handleHashChange);
 
   return {
-    getCurrentRoute,
+    getCurrentRoute() {
+      return parseHashLocation(window.location.hash);
+    },
     navigate(route: Route) {
       window.location.hash = formatHashLocation(route);
     },
