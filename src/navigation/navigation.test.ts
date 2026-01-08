@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import { formatHashFromPath, normalizePath } from "./index";
 import { formatHashLocation, parseHashLocation } from "./route";
 import { DEFAULT_PAGE_PATH, QUERY_PAGE_PATH } from "./constants";
