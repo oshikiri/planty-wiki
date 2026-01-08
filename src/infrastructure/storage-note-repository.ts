@@ -3,9 +3,9 @@ import type { Note, NoteSummary } from "../domain/note";
 import { createStorage, type NoteStorage } from "../storage";
 
 /**
- * OpfsNoteRepository is a NoteRepository implementation that delegates to the OPFS + SQLite storage.
+ * StorageNoteRepository delegates every NoteRepository call to the injected storage backend.
  */
-export class OpfsNoteRepository implements NoteRepository {
+export class StorageNoteRepository implements NoteRepository {
   constructor(private readonly storage: NoteStorage) {}
 
   loadSummaries(): Promise<NoteSummary[]> {
@@ -37,7 +37,12 @@ export class OpfsNoteRepository implements NoteRepository {
   }
 }
 
+/**
+ * Creates a NoteRepository backed by the OPFS + SQLite storage backend.
+ *
+ * @returns NoteRepository instance that persists notes via OPFS
+ */
 export function createOpfsNoteRepository(): NoteRepository {
   const storage = createStorage();
-  return new OpfsNoteRepository(storage);
+  return new StorageNoteRepository(storage);
 }

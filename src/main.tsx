@@ -1,7 +1,7 @@
 import { render } from "preact";
 
 import { App, StorageInitError } from "./app";
-import { createOpfsNoteRepository } from "./infrastructure/opfs-note-repository";
+import { createOpfsNoteRepository } from "./infrastructure/storage-note-repository";
 import { createNoteService } from "./services/note-service";
 import { createQueryService } from "./services/query-service";
 import { createHashRouter } from "./navigation/router";
