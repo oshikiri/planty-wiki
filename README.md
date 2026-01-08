@@ -21,7 +21,6 @@ sqlite3 WebAssembly & JavaScript Documentation Index https://sqlite.org/wasm/doc
 ## Known issues
 - Requires Chrome with crossOriginIsolated enabled
 - Lacks multi-tab support
-- Contains Japanese comments
 - Lacks proper error handling for OPFS persistence failures
 
 ## How I Count Lines of Code
