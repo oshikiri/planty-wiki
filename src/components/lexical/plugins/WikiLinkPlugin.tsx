@@ -13,22 +13,7 @@ type WikiLinkPluginProps = {
 };
 
 const WIKI_LINK_PATTERN = /\[\[([^[\]]+)\]\]/;
-
-function getWikiLinkMatch(text: string): EntityMatch | null {
-  const match = WIKI_LINK_PATTERN.exec(text);
-  if (!match) return null;
-  const start = match.index;
-  const end = start + match[0].length;
-  return { start, end };
-}
-
-function registerWikiLinkEntity(editor: LexicalEditor): () => void {
-  return mergeRegister(
-    ...registerLexicalTextEntity(editor, getWikiLinkMatch, WikiLinkNode, (textNode: TextNode) =>
-      $createWikiLinkNode(textNode.getTextContent()),
-    ),
-  );
-}
+const WIKI_LINK_FULL_PATTERN = new RegExp(`^${WIKI_LINK_PATTERN.source}$`);
 
 /**
  * Lexical plugin that converts `[[Page]]` syntax into WikiLink nodes and routes to the note when clicked.
@@ -49,8 +34,7 @@ export function WikiLinkPlugin({ onWikiLinkClick }: WikiLinkPluginProps) {
       if (!(linkElement instanceof HTMLElement)) return;
       event.preventDefault();
       const text = linkElement.textContent ?? "";
-      const match = text.match(/^\[\[([^[\]]+)\]\]$/);
-      const label = match?.[1]?.trim();
+      const label = extractWikiLinkLabel(text);
       if (!label) return;
       const candidate = `/pages/${label}`;
       const normalized = normalizePath(candidate);
@@ -73,4 +57,27 @@ export function WikiLinkPlugin({ onWikiLinkClick }: WikiLinkPluginProps) {
   }, [editor, onWikiLinkClick]);
 
   return null;
+}
+
+function registerWikiLinkEntity(editor: LexicalEditor): () => void {
+  return mergeRegister(
+    ...registerLexicalTextEntity(editor, getWikiLinkMatch, WikiLinkNode, (textNode: TextNode) =>
+      $createWikiLinkNode(textNode.getTextContent()),
+    ),
+  );
+}
+
+function getWikiLinkMatch(text: string): EntityMatch | null {
+  const match = WIKI_LINK_PATTERN.exec(text);
+  if (!match) return null;
+  const start = match.index;
+  const end = start + match[0].length;
+  return { start, end };
+}
+
+function extractWikiLinkLabel(text: string): string | null {
+  const match = text.match(WIKI_LINK_FULL_PATTERN);
+  const label = match?.[1]?.trim();
+  if (!label) return null;
+  return label;
 }
