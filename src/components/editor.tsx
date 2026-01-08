@@ -1,6 +1,7 @@
 import type { Backlink } from "../hooks/useBacklinks";
 import type { Note } from "../types/note";
 import { PlantyEditor } from "./lexical/PlantyEditor";
+
 import styles from "./editor.module.css";
 
 type EditorProps = {

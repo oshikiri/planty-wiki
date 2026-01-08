@@ -27,6 +27,8 @@ type ContextMenuState = {
 
 /**
  * Renders the sidebar that combines the note list with import/export actions.
+ * - Render SidebarContextMenu while the context menu is open.
+ * - Render PendingDeletionBar when Delete is selected from the context menu.
  *
  * @param props.notes Collection of notes to display
  * @param props.selectedPath Currently opened note path

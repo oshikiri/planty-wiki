@@ -3,6 +3,7 @@ import { HeadingNode, QuoteNode } from "@lexical/rich-text";
 import { ListItemNode, ListNode } from "@lexical/list";
 import { CodeNode } from "@lexical/code";
 import { LinkNode, AutoLinkNode } from "@lexical/link";
+
 import { WikiLinkNode } from "./WikiLinkNode";
 
 export const lexicalConfig: InitialConfigType = {
