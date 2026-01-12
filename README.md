@@ -2,7 +2,6 @@
 
 planty-wiki keeps every editing flow inside the browser, so you can write and browse without installing native apps.
 
-- Under 4000 lines of TypeScript/worker code
 - Built with TypeScript, Preact, Lexical, and SQLite on OPFS
 - Lets you read and edit notes directly in the browser UI
 - Persists notes in an OPFS-backed SQLite and exports Markdown on demand
@@ -28,4 +27,6 @@ sqlite3 WebAssembly & JavaScript Documentation Index https://sqlite.org/wasm/doc
 ```sh
 git ls-files -- 'public/sqlite-opfs-worker.js' '*.ts' '*.tsx' ':!'*.test.ts |\
   xargs cloc
+
+# 3607
 ```
