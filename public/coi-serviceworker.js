@@ -17,8 +17,12 @@
       window.sessionStorage.setItem(reloadKey, "true");
     };
 
+    const scriptElement =
+      document.currentScript instanceof HTMLScriptElement ? document.currentScript : null;
+    const swUrl = new URL(scriptElement?.src || "./coi-serviceworker.js", window.location.href);
+    const scopeUrl = new URL("./", swUrl);
     navigator.serviceWorker
-      .register("/coi-serviceworker.js", { scope: "./" })
+      .register(swUrl, { scope: scopeUrl.pathname })
       .then(() => {
         if (navigator.serviceWorker.controller || hasReloaded) {
           return;

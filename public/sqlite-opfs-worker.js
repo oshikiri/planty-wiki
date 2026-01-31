@@ -83,7 +83,7 @@ function createOrGetDbPromise() {
   if (!dbPromise) {
     dbPromise = (async () => {
       try {
-        importScripts("/sqlite3.js");
+        importScripts(new URL("sqlite3.js", self.location).toString());
         if (typeof self.sqlite3InitModule !== "function") {
           console.error("sqlite3InitModule is not available in worker");
           return null;

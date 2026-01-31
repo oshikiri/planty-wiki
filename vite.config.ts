@@ -1,7 +1,8 @@
 import { defineConfig } from "vite";
 import preact from "@preact/preset-vite";
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
+  base: mode === "production" ? "/planty-wiki/" : "/",
   plugins: [preact()],
   resolve: {
     alias: {
@@ -10,4 +11,4 @@ export default defineConfig({
       "react/jsx-runtime": "preact/jsx-runtime",
     },
   },
-});
+}));
