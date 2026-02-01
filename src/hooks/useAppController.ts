@@ -13,6 +13,7 @@ import type { Note, PendingSave } from "../types/note";
 import type { NoteService } from "../services/note-service";
 import type { Router } from "../navigation/router";
 import { buildNote, deriveTitleFromPath } from "../domain/note";
+import { DEFAULT_DOC_SOURCES, DEFAULT_INDEX_MARKDOWN } from "../defaults/initial-docs";
 
 import { useBacklinks, type Backlink } from "./useBacklinks";
 import { useBootstrapNotes } from "./useBootstrapNotes";
@@ -144,6 +145,8 @@ export function useAppController({
   const [pendingSave, setPendingSave] = useState<PendingSave | null>(null);
   useBootstrapNotes({
     defaultPage: DEFAULT_PAGE_PATH,
+    defaultNoteBody: DEFAULT_INDEX_MARKDOWN,
+    defaultDocSources: DEFAULT_DOC_SOURCES,
     deriveTitle,
     sanitizeNoteForSave,
     setCurrentNote,

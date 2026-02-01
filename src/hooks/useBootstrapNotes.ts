@@ -9,6 +9,8 @@ import type { AppRoute, NoteStoragePort } from "../usecases/ports";
 
 export type UseBootstrapNotesParams = {
   defaultPage: string;
+  defaultNoteBody: string;
+  defaultDocSources: { sourcePath: string; body: string }[];
   deriveTitle: (path: string) => string;
   sanitizeNoteForSave: (note: Note) => Note;
   setRoute: Dispatch<StateUpdater<Route>>;
@@ -29,6 +31,8 @@ export type UseBootstrapNotesParams = {
 export function useBootstrapNotes(params: UseBootstrapNotesParams) {
   const {
     defaultPage,
+    defaultNoteBody,
+    defaultDocSources,
     deriveTitle,
     sanitizeNoteForSave,
     setRoute,
@@ -43,6 +47,8 @@ export function useBootstrapNotes(params: UseBootstrapNotesParams) {
     const abortController = new AbortController();
     bootstrapNotes({
       defaultPage,
+      defaultNoteBody,
+      defaultDocSources,
       deriveTitle,
       sanitizeNoteForSave,
       noteStorage: createNoteStoragePort(noteService),
@@ -83,6 +89,8 @@ export function useBootstrapNotes(params: UseBootstrapNotesParams) {
     };
   }, [
     defaultPage,
+    defaultNoteBody,
+    defaultDocSources,
     deriveTitle,
     sanitizeNoteForSave,
     setRoute,

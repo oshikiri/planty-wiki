@@ -1,8 +1,16 @@
 import type { Note, NoteSummary } from "../domain/note";
+import { normalizePath } from "../domain/path";
 import type { NoteStoragePort, AppRoute } from "./ports";
+
+type DefaultDocSource = {
+  sourcePath: string;
+  body: string;
+};
 
 export type BootstrapNotesParams = {
   defaultPage: string;
+  defaultNoteBody: string;
+  defaultDocSources: DefaultDocSource[];
   deriveTitle: (path: string) => string;
   sanitizeNoteForSave: (note: Note) => Note;
   noteStorage: NoteStoragePort;
@@ -23,6 +31,8 @@ export type BootstrapNotesResult = {
  */
 export async function bootstrapNotes({
   defaultPage,
+  defaultNoteBody,
+  defaultDocSources,
   deriveTitle,
   sanitizeNoteForSave,
   noteStorage,
@@ -30,8 +40,24 @@ export async function bootstrapNotes({
   signal,
 }: BootstrapNotesParams): Promise<BootstrapNotesResult> {
   try {
-    const summaries = await noteStorage.loadNoteSummaries();
+    let summaries = await noteStorage.loadNoteSummaries();
+    let isStorageEmpty = summaries.length === 0;
     let storageUpdated = false;
+    if (isStorageEmpty) {
+      const seeded = await seedDefaultNotes({
+        defaultPage,
+        defaultNoteBody,
+        defaultDocSources,
+        deriveTitle,
+        sanitizeNoteForSave,
+        noteStorage,
+      });
+      storageUpdated = storageUpdated || seeded.storageUpdated;
+      if (storageUpdated) {
+        summaries = await noteStorage.loadNoteSummaries();
+        isStorageEmpty = summaries.length === 0;
+      }
+    }
     if (signal?.aborted) {
       return createAbortedResult(defaultPage);
     }
@@ -41,12 +67,15 @@ export async function bootstrapNotes({
         route: routeFromHash,
         shouldNavigate: false,
         initialNote: null,
-        storageUpdated: false,
+        storageUpdated,
       };
     }
     if (routeFromHash?.kind === "note") {
       const ensured = await ensureNoteExists({
         normalized: routeFromHash.path,
+        isStorageEmpty,
+        defaultPage,
+        defaultNoteBody,
         summaries,
         deriveTitle,
         sanitizeNoteForSave,
@@ -75,6 +104,7 @@ export async function bootstrapNotes({
     }
     const created = await createDefaultNote({
       defaultPage,
+      defaultNoteBody,
       deriveTitle,
       sanitizeNoteForSave,
       noteStorage,
@@ -105,6 +135,9 @@ export async function bootstrapNotes({
 
 type EnsureNoteExistsParams = {
   normalized: string;
+  isStorageEmpty: boolean;
+  defaultPage: string;
+  defaultNoteBody: string;
   summaries: NoteSummary[];
   deriveTitle: (path: string) => string;
   sanitizeNoteForSave: (note: Note) => Note;
@@ -119,6 +152,9 @@ type EnsureNoteExistsResult = {
 
 async function ensureNoteExists({
   normalized,
+  isStorageEmpty,
+  defaultPage,
+  defaultNoteBody,
   summaries,
   deriveTitle,
   sanitizeNoteForSave,
@@ -133,7 +169,7 @@ async function ensureNoteExists({
   const newNote = sanitizeNoteForSave({
     path: normalized,
     title: deriveTitle(normalized),
-    body: "",
+    body: isStorageEmpty && normalized === defaultPage ? defaultNoteBody : "",
     updatedAt: now,
   });
   let statusMessage: string | undefined;
@@ -152,6 +188,7 @@ async function ensureNoteExists({
 
 type CreateDefaultNoteParams = {
   defaultPage: string;
+  defaultNoteBody: string;
   deriveTitle: (path: string) => string;
   sanitizeNoteForSave: (note: Note) => Note;
   noteStorage: NoteStoragePort;
@@ -166,6 +203,7 @@ type CreateDefaultNoteResult = {
 
 async function createDefaultNote({
   defaultPage,
+  defaultNoteBody,
   deriveTitle,
   sanitizeNoteForSave,
   noteStorage,
@@ -175,7 +213,7 @@ async function createDefaultNote({
   const fallbackNote = sanitizeNoteForSave({
     path: defaultPage,
     title: deriveTitle(defaultPage),
-    body: "",
+    body: defaultNoteBody,
     updatedAt: now,
   });
   let statusMessage: string | undefined;
@@ -198,5 +236,98 @@ function createAbortedResult(defaultPage: string): BootstrapNotesResult {
     shouldNavigate: false,
     initialNote: null,
     storageUpdated: false,
+  };
+}
+
+type NoteSeed = {
+  path: string;
+  body: string;
+};
+
+type SeedDefaultNotesParams = {
+  defaultPage: string;
+  defaultNoteBody: string;
+  defaultDocSources: DefaultDocSource[];
+  deriveTitle: (path: string) => string;
+  sanitizeNoteForSave: (note: Note) => Note;
+  noteStorage: NoteStoragePort;
+};
+
+type SeedDefaultNotesResult = {
+  storageUpdated: boolean;
+};
+
+async function seedDefaultNotes({
+  defaultPage,
+  defaultNoteBody,
+  defaultDocSources,
+  deriveTitle,
+  sanitizeNoteForSave,
+  noteStorage,
+}: SeedDefaultNotesParams): Promise<SeedDefaultNotesResult> {
+  const seeds = createDefaultNoteSeeds({
+    defaultPage,
+    defaultNoteBody,
+    defaultDocSources,
+  });
+  if (seeds.length === 0) {
+    return { storageUpdated: false };
+  }
+  let storageUpdated = false;
+  for (const seed of seeds) {
+    const now = new Date().toISOString();
+    const note = sanitizeNoteForSave({
+      path: seed.path,
+      title: deriveTitle(seed.path),
+      body: seed.body,
+      updatedAt: now,
+    });
+    try {
+      await noteStorage.saveNote(note);
+      storageUpdated = true;
+    } catch (error) {
+      console.error("Failed to seed default notes from bundled docs", error);
+    }
+  }
+  return { storageUpdated };
+}
+
+type CreateDefaultNoteSeedsParams = {
+  defaultPage: string;
+  defaultNoteBody: string;
+  defaultDocSources: DefaultDocSource[];
+};
+
+function createDefaultNoteSeeds({
+  defaultPage,
+  defaultNoteBody,
+  defaultDocSources,
+}: CreateDefaultNoteSeedsParams): NoteSeed[] {
+  const seeds = new Map<string, NoteSeed>();
+  seeds.set(defaultPage, { path: defaultPage, body: defaultNoteBody });
+  for (const source of defaultDocSources) {
+    const seed = mapDocSourceToSeed(source, defaultPage);
+    if (!seed) {
+      continue;
+    }
+    if (!seeds.has(seed.path)) {
+      seeds.set(seed.path, seed);
+    }
+  }
+  return Array.from(seeds.values());
+}
+
+function mapDocSourceToSeed(source: DefaultDocSource, defaultPage: string): NoteSeed | null {
+  const match = source.sourcePath.match(/\/docs\/(.+)\.md$/);
+  if (!match) {
+    return null;
+  }
+  const relativePath = match[1];
+  if (relativePath === "index") {
+    return { path: defaultPage, body: source.body };
+  }
+  return {
+    path: normalizePath(`/pages/${relativePath}`),
+    body: source.body,
   };
 }
