@@ -1,58 +1,58 @@
-# planty-wikiで使えるMarkdown
+# Markdown Supported in planty-wiki
 
-## 見出しとタイトル
+## Headings and Titles
 
-- 先頭行に `# タイトル` を書いてノートのタイトルとして利用する。
-- `##` から `######` までを使って小見出しを作成する。
-- 例: `# プロジェクト概要`、`## 今日やること` のように使う。
+- Use `#`–`######` for headings.
+- Example: `# Project Overview` or `## Tasks for Today`.
 
-## 段落と改行
+## Paragraphs and Line Breaks
 
-- 空行を挟むと段落を区切ることができる。
+- Add a blank line to separate paragraphs.
 
-## リストとチェックボックス
+## Lists and Checkboxes
 
-- 先頭に `- ` や `* `、`+ ` を付けて箇条書きリストを作成する。
-- `1. ` などの番号付きで番号付きリストを作成する。
-- 4スペースでインデントすることで、ネストしたリストを作成することができる。
-- `- [ ] タスク` のように書いて未完了のチェックボックス付きリストを作成する。
-- `- [x] 完了したタスク` のように書いて完了済みのチェックボックス付きリストを作成する。
+- Start a line with `- `, `* `, or `+ ` to create a bulleted list.
+- Use `1. ` to create a numbered list.
+- Indent by 4 spaces to create nested lists.
+- Use `- [ ] Task` to create an unchecked checklist item.
+- Use `- [x] Completed task` to create a checked checklist item.
 
-## 強調とインラインコード
+## Emphasis and Inline Code
 
-- `*text*` や `_text_` を使って斜体風の強調を行う。*text*
-- `**text**` や `__text__` を使って太字による強調を行う。**text**
-- `~~text~~` を使って取り消し線を付ける。~~text~~
-- \`code\` を使ってインラインコードを表示する。 `code`
+- Use `*text*` or `_text_` for italics. *text*
+- Use `**text**` or `__text__` for bold emphasis. **text**
+- Use `~~text~~` to apply strikethrough. ~~text~~
+- Use \`code\` to show inline code. `code`
 
-## コードブロック
+## Code Blocks
 
-- 三つのバッククォートで囲んでコードブロックを作成する。
-- 例:
+- Wrap the code in three backticks to create a code block.
+- Example:
 
 ```ts
 const message = "hello";
 console.log(message);
 ```
 
-## 引用
+## Blockquotes
 
-- 行頭に `> ` を付けて引用ブロックを作成する。
-    - >例: 仕様書から引用するときに `> この機能はオフラインでも動作する` のように使う。
+- Start a line with `> ` to create a blockquote.
+    - >Example: `> This feature works offline` when quoting the spec.
 
-## リンクとWikiリンク
+## Links and Wiki Links
 
-- `[テキスト](https://example.com)` の形式で外部リンクを作成する。
-    - 例: [トップページ](https://example.com/)
-- `https://example.com` のようにhttp/httpsで始まるプレーンURLも自動的にリンク化され、クリックするとブラウザで開く。
-    - 例: `https://developer.chrome.com/` とURLをそのまま貼り付けてブラウザで確認する。
-- `[[pages/foo]]` のように `[[...]]` で囲んでページへのWikiリンクを記述する。
-- Wikiリンクは本文中で強調表示される。クリックすると該当ページに遷移する。
-- 現在開いているページを参照しているノート（バックリンク）はエディタ下部のBacklinks一覧にまとまった形で表示する。
+- Use `[text](https://example.com)` for an external link.
+    - Example: [Home](https://example.com/)
+- Plain URLs that start with http/https such as `https://example.com` become links automatically.
+- They open in your browser when clicked.
+    - Example: Paste `https://developer.chrome.com/` as is and open it in your browser.
+- Wrap a page path in `[[...]]`, such as `[[pages/foo]]`, to create a wiki link.
+- Wiki links appear emphasized in the text, and clicking them takes you to the linked page.
+- Notes that link to the current page (backlinks) are grouped in the Backlinks list at the bottom of the editor.
 
 
-## サポート外の記法
+## Unsupported Syntax
 
-- 画像埋め込み記法（`![altテキスト](url "タイトル")`）は本文中の文字列として扱い、描画されない。
-- Markdownのテーブルや脚注など一部の拡張記法は現時点でサポートしない。
-- Lexicalやナビゲーションの設定を変更したときはこのファイルの記法一覧も合わせて更新する。
+- The image embed syntax (`![alt text](url "title")`) is shown as plain text and does not render.
+- Some extended syntax such as tables and footnotes is not supported at this time.
+- When you change Lexical or navigation settings, update this list as well.

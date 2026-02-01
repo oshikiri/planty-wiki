@@ -1,54 +1,54 @@
-# 機能要件
+# Functional Requirements
 
-## 概要
+## Overview
 
-- 技術スタック: TypeScript + Preact + Vite + Lexical + SQLite WASM on OPFS
-- UIのラベルやプレースホルダー、ユーザーに見せるステータスメッセージや通知文言は、英語で統一する
-- 表示/ルーティング
-    - `/pages/[マークダウンファイルの名前をURLエンコードしたもの]` 形式でルーティングする。
-    - 存在しないページにルーティングした場合は、空ページを作成し、新しく記入できるようにする
-    - SQLクエリ実行ページは`/tools/query`で開き、SELECTまたはWITHクエリの結果を表形式で表示する
+- Tech stack: TypeScript + Preact + Vite + Lexical + SQLite WASM on OPFS.
+- Use English for UI labels, placeholders, status messages, and notifications shown to users.
+- Display and routing:
+  - Route with `/pages/[URL-encoded markdown file name]`.
+  - Create an empty page when routing to a missing page so users can start writing.
+  - Open the SQL query page at `/tools/query` and display SELECT or WITH results in a table.
 
-## 実行環境
+## Runtime Environment
 
-- 対応ブラウザ: Chrome>=142
-    - その他のブラウザは未検証。
-- シークレットウィンドウやゲストモードは、ブラウザ終了時にデータが消えるため非対応とする。
-- 複数のブラウザで自動同期することはできないため、必ず単一のブラウザで利用する。
-- OPFSを有効にするため、HTTPS配信または `http://localhost` 環境で利用する。
+- Supported browser: Chrome>=142.
+  - Treat other browsers as unverified.
+- Do not support incognito or guest mode because data disappears on browser exit.
+- Use a single browser because automatic sync across browsers is not possible.
+- Serve over HTTPS or localhost to enable OPFS.
 
-## 保存/同期
+## Storage and Sync
 
-- インポートや一括保存の入力データは1件ずつ検証しつつ挿入する
-    - 不正なレコードがあればトランザクション全体を失敗させ、DBに不正なデータが混入しないようにする
-- 保存済みデータを削除するUIでは。必ず確認ダイアログやUndoバー等の安全策を提示し、誤操作で即時削除されないようにする
-- ある差分のストレージへの保存が失敗しても、その差分を削除せずに保持し、復旧後に再保存できるようにする
-- 中間テーブルとして SQLite WASM に保存し、通常時はそこから読み書きする。
-- ユーザーが選択したローカルディレクトリからMarkdownをインポートする機能を用意する。
-- Markdownフォルダからインポートした際は、既存のSQLiteデータベースをクリアして、インポートした内容で上書きする。
-- 編集中に数秒入力が止まったときは、内容を自動保存しSQLiteに変更を反映する。
-- Markdownファイルへの書き出しはExportボタンを押したときのみ実行する。通常の自動保存では走らせない。
-- 取り込み後にファイルが更新され競合が発生した場合はファイル側を無視し、再エクスポートでDBを正として上書きする。
+- Validate and insert import or bulk-save input records one by one.
+  - Fail the entire transaction when an invalid record is found so invalid data never enters the DB.
+- Show a confirmation dialog or an undo bar in delete UIs so data is not removed immediately by mistake.
+- Keep a failed diff instead of discarding it so it can be saved again after recovery.
+- Store data in SQLite WASM as an intermediate table and read and write there in normal operations.
+- Provide a feature that imports Markdown from a user-selected local directory.
+- Clear the existing SQLite database and overwrite it with the imported content when importing from a Markdown folder.
+- Auto-save and apply changes to SQLite when input pauses for a few seconds during editing.
+- Run Markdown export only when the Export button is pressed, and do not run it during normal auto-save.
+- Ignore the file side on conflicts after import and overwrite with the DB by re-exporting.
 
-## マークダウン
+## Markdown
 
-- `[[Page]]` 形式のwikiリンクをサポートする。本文中では強調表示し、クリックで対応するページを開く。
-- 画像埋め込み記法（`![alt](url)`）は非対応。単に本文中の文字列として保存する
-    - 将来的に画像埋め込みをサポートする可能性はあるものの、現時点では `![...]` をそのままの文字列として受け入れる
-- マークダウンのポータビリティ性を高めるため、独自のマークダウン拡張はできるだけ使わない
+- Support wiki links in the `[[Page]]` format, emphasize them in the body, and open the page on click.
+- Do not support image embed syntax (`![alt](url)`), and store it as plain text.
+  - Keep accepting `![...]` as a literal string for now, although image embeds may be supported later.
+- Avoid custom Markdown extensions to maximize portability.
 
-## 配布形態
+## Distribution
 
-- 静的ホスティング: GitHub Pages に配置する。
-- 初回起動時に保存済みノートがない場合は `docs/` 配下のマークダウンを読み込み、`/pages/...` として表示する。
-- SQLite WASM関連ファイルは公式配布物をリポジトリの `/public/sqlite3.{js,wasm}` として直接配置し、`sqlite-opfs-worker.js` や `sqlite3-opfs-async-proxy.js` と合わせて配布する。
-- 画像や添付ファイルは現時点でサポートしていない。
-- アプリ全体のインストール・オフラインキャッシュも提供しない。
+- Use static hosting on GitHub Pages.
+- Load Markdown under `docs/` at first launch when no saved notes exist, and show it as `/pages/...`.
+- Place official SQLite WASM artifacts directly under `/public/sqlite3.{js,wasm}` and distribute them with `sqlite-opfs-worker.js` and `sqlite3-opfs-async-proxy.js`.
+- Do not support images or attachments at this time.
+- Do not provide full-app installation or offline cache.
 
-## 既知の制約
+## Known Limitations
 
-- DBスキーマのマイグレーションは自動化されていないため、スキーマ変更時にデータが失われる恐れがある。
-- データは利用中のブラウザプロファイルごとにローカル保存される。サーバーやクラウドに自動同期しないため、複数端末同期は非対応。
-- ブラウザのストレージをクリアした場合やプロファイルを削除した場合はノートが失われる。
-- SQLite/OPFSを使った保存はChromeのcrossOriginIsolated環境を前提となっている。条件を満たさない場合はメモリ上でのみ動作してデータが保持されない。
-- 複数タブから編集したときの動作が保証できていない。
+- Do not automate DB schema migrations, so schema changes may lose data.
+- Save data locally per browser profile and do not sync to servers or clouds, so multi-device sync is unsupported.
+- Lose notes when browser storage is cleared or a profile is deleted.
+- Assume a Chrome crossOriginIsolated environment for SQLite/OPFS storage and fall back to memory-only mode without persistence when requirements are not met.
+- Do not guarantee behavior when editing from multiple tabs.

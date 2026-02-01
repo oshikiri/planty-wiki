@@ -1,11 +1,11 @@
-# メインページ
+# Main Page
 
-planty-wikiは完全にローカル環境で動く軽量なメモアプリである。
-サーバーサイドアプリケーションを持たず、ブラウザ内のストレージにメモを保存する。
+planty-wiki is a lightweight note-taking app that runs entirely in a local environment.
+It has no server-side application and stores notes in browser storage.
 
-## 目次
+## Table of Contents
 
-このマークダウンには概要だけを記載し、詳細は以下の専用Markdownに切り出す:
+This markdown has only a summary. The details are in the pages below:
 
-- Plantyの仕様: [[specification]]
-- PlantyがサポートしているMarkdownの構文 [[markdown-syntax]]
+- Planty specifications: [[specification]]
+- Markdown syntax supported by Planty: [[markdown-syntax]]
