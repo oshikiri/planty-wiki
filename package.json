@@ -25,7 +25,7 @@
     "@lexical/react": "0.39.0",
     "@lexical/rich-text": "0.39.0",
     "lexical": "0.39.0",
-    "preact": "10.28.2"
+    "preact": "10.28.3"
   },
   "devDependencies": {
     "@biomejs/biome": "2.3.10",
