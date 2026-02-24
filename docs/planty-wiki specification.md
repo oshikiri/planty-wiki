@@ -36,6 +36,7 @@
 - Do not support image embed syntax (`![alt](url)`), and store it as plain text.
   - Keep accepting `![...]` as a literal string for now, although image embeds may be supported later.
 - Avoid custom Markdown extensions to maximize portability.
+- See [[planty-wiki markdown syntax]] for details.
 
 ## Distribution
 
@@ -46,11 +47,3 @@
 - Place official SQLite WASM artifacts directly under `/public/sqlite3.{js,wasm}` and distribute them with `sqlite-opfs-worker.js` and `sqlite3-opfs-async-proxy.js`.
 - Do not support images or attachments at this time.
 - Do not provide full-app installation or offline cache.
-
-## Known Limitations
-
-- Do not automate DB schema migrations, so schema changes may lose data.
-- Save data locally per browser profile and do not sync to servers or clouds, so multi-device sync is unsupported.
-- Lose notes when browser storage is cleared or a profile is deleted.
-- Assume a Chrome crossOriginIsolated environment for SQLite/OPFS storage and fall back to memory-only mode without persistence when requirements are not met.
-- Do not guarantee behavior when editing from multiple tabs.

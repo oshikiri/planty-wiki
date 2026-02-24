@@ -12,8 +12,14 @@ demo page: <https://oshikiri.github.io/planty-wiki/#/pages/index>
 ## Known issues
 - Requires Chrome with crossOriginIsolated enabled
 - Lacks multi-tab support
-  - cf. [How we sped up Notion in the browser with WASM SQLite](https://www.notion.com/blog/how-we-sped-up-notion-in-the-browser-with-wasm-sqlite)
+  - This can cause data loss
+  - Reference: [How we sped up Notion in the browser with WASM SQLite](https://www.notion.com/blog/how-we-sped-up-notion-in-the-browser-with-wasm-sqlite)
 - Lacks proper error handling for OPFS persistence failures
+- Lacks automatic DB schema migrations, so schema changes may lose data.
+- Saves data locally per browser profile and do not sync to servers or clouds, so multi-device sync is unsupported.
+  - Google Drive API integration?
+- Loses notes when browser storage is cleared or a profile is deleted.
+- Image embeds are not supported
 
 ## Launch Locally
 
