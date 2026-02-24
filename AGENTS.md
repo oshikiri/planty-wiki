@@ -10,7 +10,7 @@
 - レビューを行う際は `review` エージェントを立ち上げてレビューさせる
 
 ## Planty-Wiki
-- 詳細な仕様は docs/index.md に記載する
+- 詳細な仕様は docs/README.md に記載する
 
 ### アーキテクチャ
 - 依存方向は `domain -> usecases -> hooks -> components -> app` とし、外側の層は内側へ依存しても良いが逆方向は禁止する

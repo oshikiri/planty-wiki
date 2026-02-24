@@ -2,7 +2,7 @@
 
 planty-wiki keeps every editing flow inside the browser, so you can write and browse without a native app or a server.
 
-demo page: <https://oshikiri.github.io/planty-wiki/#/pages/index>
+demo page: <https://oshikiri.github.io/planty-wiki/#/pages/README>
 
 - Built with TypeScript, Preact, Lexical, and SQLite on OPFS
 - Browse and edit notes in the browser

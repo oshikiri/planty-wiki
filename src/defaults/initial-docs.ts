@@ -11,7 +11,7 @@ const rawDocs = import.meta.glob("../../docs/**/*.md", {
   import: "default",
 }) as Record<string, string>;
 
-export const DEFAULT_INDEX_MARKDOWN = rawDocs["../../docs/index.md"] ?? "";
+export const DEFAULT_README_MARKDOWN = rawDocs["../../docs/README.md"] ?? "";
 export const DEFAULT_DOC_SOURCES: DefaultDocSource[] = Object.entries(rawDocs)
   .filter(([sourcePath]) => !sourcePath.includes("/docs/journals/"))
   .map(([sourcePath, body]) => ({

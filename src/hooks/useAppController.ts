@@ -14,7 +14,7 @@ import type { NoteService } from "../services/note-service";
 import type { Router } from "../navigation/router";
 import { buildNote, deriveTitleFromPath } from "../domain/note";
 import {
-  DEFAULT_INDEX_MARKDOWN,
+  DEFAULT_README_MARKDOWN,
   resolveBundledDocBody,
 } from "../defaults/initial-docs";
 
@@ -149,7 +149,7 @@ export function useAppController({
   const [pendingSave, setPendingSave] = useState<PendingSave | null>(null);
   useBootstrapNotes({
     defaultPage: DEFAULT_PAGE_PATH,
-    defaultNoteBody: DEFAULT_INDEX_MARKDOWN,
+    defaultNoteBody: DEFAULT_README_MARKDOWN,
     resolveBundledDocBody,
     deriveTitle,
     sanitizeNoteForSave,
