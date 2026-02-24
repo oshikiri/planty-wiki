@@ -7,6 +7,7 @@ type SelectOrCreateNoteParams = {
   defaultPage: string;
   deriveTitle: (path: string) => string;
   sanitizeNoteForSave: (note: Note) => Note;
+  resolveBundledDocBody?: (path: string) => string | null;
   noteStorage: Pick<NoteStoragePort, "saveNote" | "loadNote">;
 };
 
@@ -28,18 +29,27 @@ export async function selectOrCreateNote({
   defaultPage,
   deriveTitle,
   sanitizeNoteForSave,
+  resolveBundledDocBody,
   noteStorage,
 }: SelectOrCreateNoteParams): Promise<SelectOrCreateNoteResult> {
   const normalized = path ? normalizePath(path) : defaultPage;
   const existing = await noteStorage.loadNote(normalized);
   if (existing) {
-    return { note: existing, routePath: normalized, created: false };
+    const bundledBody = resolveBundledDocBody?.(normalized);
+    if (bundledBody == null || existing.body === bundledBody) {
+      return { note: existing, routePath: normalized, created: false };
+    }
+    return {
+      note: { ...existing, body: bundledBody },
+      routePath: normalized,
+      created: false,
+    };
   }
   const now = new Date().toISOString();
   const newNote = sanitizeNoteForSave({
     path: normalized,
     title: deriveTitle(normalized),
-    body: "",
+    body: resolveBundledDocBody?.(normalized) ?? "",
     updatedAt: now,
   });
   let statusMessage: string | undefined;

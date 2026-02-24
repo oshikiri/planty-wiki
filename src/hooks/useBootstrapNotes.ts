@@ -10,7 +10,7 @@ import type { AppRoute, NoteStoragePort } from "../usecases/ports";
 export type UseBootstrapNotesParams = {
   defaultPage: string;
   defaultNoteBody: string;
-  defaultDocSources: { sourcePath: string; body: string }[];
+  resolveBundledDocBody: (path: string) => string | null;
   deriveTitle: (path: string) => string;
   sanitizeNoteForSave: (note: Note) => Note;
   setRoute: Dispatch<StateUpdater<Route>>;
@@ -32,7 +32,7 @@ export function useBootstrapNotes(params: UseBootstrapNotesParams) {
   const {
     defaultPage,
     defaultNoteBody,
-    defaultDocSources,
+    resolveBundledDocBody,
     deriveTitle,
     sanitizeNoteForSave,
     setRoute,
@@ -48,7 +48,7 @@ export function useBootstrapNotes(params: UseBootstrapNotesParams) {
     bootstrapNotes({
       defaultPage,
       defaultNoteBody,
-      defaultDocSources,
+      resolveBundledDocBody,
       deriveTitle,
       sanitizeNoteForSave,
       noteStorage: createNoteStoragePort(noteService),
@@ -90,7 +90,7 @@ export function useBootstrapNotes(params: UseBootstrapNotesParams) {
   }, [
     defaultPage,
     defaultNoteBody,
-    defaultDocSources,
+    resolveBundledDocBody,
     deriveTitle,
     sanitizeNoteForSave,
     setRoute,

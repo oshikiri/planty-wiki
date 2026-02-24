@@ -13,7 +13,10 @@ import type { Note, PendingSave } from "../types/note";
 import type { NoteService } from "../services/note-service";
 import type { Router } from "../navigation/router";
 import { buildNote, deriveTitleFromPath } from "../domain/note";
-import { DEFAULT_DOC_SOURCES, DEFAULT_INDEX_MARKDOWN } from "../defaults/initial-docs";
+import {
+  DEFAULT_INDEX_MARKDOWN,
+  resolveBundledDocBody,
+} from "../defaults/initial-docs";
 
 import { useBacklinks, type Backlink } from "./useBacklinks";
 import { useBootstrapNotes } from "./useBootstrapNotes";
@@ -105,16 +108,16 @@ export function useAppController({
           return;
         }
         if (note) {
-          setCurrentNote(note);
+          setCurrentNote(applyBundledDocBody(note));
           incrementNoteRevision();
           return;
         }
         const fallback = sanitizeNoteForSave({
           path: route.path,
           title: deriveTitle(route.path),
-          body: "",
+          body: resolveBundledDocBody(route.path) ?? "",
         });
-        setCurrentNote(fallback);
+        setCurrentNote(applyBundledDocBody(fallback));
         incrementNoteRevision();
       })
       .catch((error) => {
@@ -131,6 +134,7 @@ export function useAppController({
     route,
     currentNote,
     noteService,
+    resolveBundledDocBody,
     sanitizeNoteForSave,
     deriveTitle,
     incrementNoteRevision,
@@ -146,7 +150,7 @@ export function useAppController({
   useBootstrapNotes({
     defaultPage: DEFAULT_PAGE_PATH,
     defaultNoteBody: DEFAULT_INDEX_MARKDOWN,
-    defaultDocSources: DEFAULT_DOC_SOURCES,
+    resolveBundledDocBody,
     deriveTitle,
     sanitizeNoteForSave,
     setCurrentNote,
@@ -162,6 +166,7 @@ export function useAppController({
     defaultPage: DEFAULT_PAGE_PATH,
     deriveTitle,
     sanitizeNoteForSave,
+    resolveBundledDocBody,
     setDraftBody,
     setCurrentNote,
     incrementNoteRevision,
@@ -204,6 +209,7 @@ export function useAppController({
   useHashRouteGuard({
     deriveTitle,
     sanitizeNoteForSave,
+    resolveBundledDocBody,
     setRoute,
     setStatusMessage,
     noteService,
@@ -247,6 +253,14 @@ export function useAppController({
   const handleCancelDelete = useCallback(() => {
     setPendingDeletionPath(null);
   }, []);
+
+  function applyBundledDocBody(note: Note): Note {
+    const bundledBody = resolveBundledDocBody(note.path);
+    if (bundledBody === null || note.body === bundledBody) {
+      return note;
+    }
+    return { ...note, body: bundledBody };
+  }
 
   return {
     noteRevision,

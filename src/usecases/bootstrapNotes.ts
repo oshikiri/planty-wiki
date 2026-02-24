@@ -1,18 +1,12 @@
 import type { Note, NoteSummary } from "../domain/note";
-import { normalizePath } from "../domain/path";
 import type { NoteStoragePort, AppRoute } from "./ports";
-
-type DefaultDocSource = {
-  sourcePath: string;
-  body: string;
-};
 
 export type BootstrapNotesParams = {
   defaultPage: string;
   defaultNoteBody: string;
-  defaultDocSources: DefaultDocSource[];
   deriveTitle: (path: string) => string;
   sanitizeNoteForSave: (note: Note) => Note;
+  resolveBundledDocBody?: (path: string) => string | null;
   noteStorage: NoteStoragePort;
   getCurrentRoute: () => AppRoute | null;
   signal?: AbortSignal;
@@ -32,32 +26,16 @@ export type BootstrapNotesResult = {
 export async function bootstrapNotes({
   defaultPage,
   defaultNoteBody,
-  defaultDocSources,
   deriveTitle,
   sanitizeNoteForSave,
+  resolveBundledDocBody,
   noteStorage,
   getCurrentRoute,
   signal,
 }: BootstrapNotesParams): Promise<BootstrapNotesResult> {
   try {
-    let summaries = await noteStorage.loadNoteSummaries();
-    let isStorageEmpty = summaries.length === 0;
+    const summaries = await noteStorage.loadNoteSummaries();
     let storageUpdated = false;
-    if (isStorageEmpty) {
-      const seeded = await seedDefaultNotes({
-        defaultPage,
-        defaultNoteBody,
-        defaultDocSources,
-        deriveTitle,
-        sanitizeNoteForSave,
-        noteStorage,
-      });
-      storageUpdated = storageUpdated || seeded.storageUpdated;
-      if (storageUpdated) {
-        summaries = await noteStorage.loadNoteSummaries();
-        isStorageEmpty = summaries.length === 0;
-      }
-    }
     if (signal?.aborted) {
       return createAbortedResult(defaultPage);
     }
@@ -73,17 +51,18 @@ export async function bootstrapNotes({
     if (routeFromHash?.kind === "note") {
       const ensured = await ensureNoteExists({
         normalized: routeFromHash.path,
-        isStorageEmpty,
-        defaultPage,
-        defaultNoteBody,
         summaries,
         deriveTitle,
         sanitizeNoteForSave,
+        resolveBundledDocBody,
         noteStorage,
         signal,
       });
       storageUpdated = storageUpdated || ensured.storageUpdated;
-      const resolvedNote = await noteStorage.loadNote(routeFromHash.path);
+      const resolvedNote = applyBundledDocBody(
+        await noteStorage.loadNote(routeFromHash.path),
+        resolveBundledDocBody,
+      );
       return {
         route: routeFromHash,
         shouldNavigate: false,
@@ -94,7 +73,7 @@ export async function bootstrapNotes({
     }
     if (summaries[0]) {
       const route: AppRoute = { kind: "note", path: summaries[0].path };
-      const initialNote = await noteStorage.loadNote(route.path);
+      const initialNote = applyBundledDocBody(await noteStorage.loadNote(route.path), resolveBundledDocBody);
       return {
         route,
         shouldNavigate: true,
@@ -107,6 +86,7 @@ export async function bootstrapNotes({
       defaultNoteBody,
       deriveTitle,
       sanitizeNoteForSave,
+      resolveBundledDocBody,
       noteStorage,
       signal,
     });
@@ -135,12 +115,10 @@ export async function bootstrapNotes({
 
 type EnsureNoteExistsParams = {
   normalized: string;
-  isStorageEmpty: boolean;
-  defaultPage: string;
-  defaultNoteBody: string;
   summaries: NoteSummary[];
   deriveTitle: (path: string) => string;
   sanitizeNoteForSave: (note: Note) => Note;
+  resolveBundledDocBody?: (path: string) => string | null;
   noteStorage: NoteStoragePort;
   signal?: AbortSignal;
 };
@@ -152,12 +130,10 @@ type EnsureNoteExistsResult = {
 
 async function ensureNoteExists({
   normalized,
-  isStorageEmpty,
-  defaultPage,
-  defaultNoteBody,
   summaries,
   deriveTitle,
   sanitizeNoteForSave,
+  resolveBundledDocBody,
   noteStorage,
   signal,
 }: EnsureNoteExistsParams): Promise<EnsureNoteExistsResult> {
@@ -169,7 +145,7 @@ async function ensureNoteExists({
   const newNote = sanitizeNoteForSave({
     path: normalized,
     title: deriveTitle(normalized),
-    body: isStorageEmpty && normalized === defaultPage ? defaultNoteBody : "",
+    body: resolveBundledDocBody?.(normalized) ?? "",
     updatedAt: now,
   });
   let statusMessage: string | undefined;
@@ -191,6 +167,7 @@ type CreateDefaultNoteParams = {
   defaultNoteBody: string;
   deriveTitle: (path: string) => string;
   sanitizeNoteForSave: (note: Note) => Note;
+  resolveBundledDocBody?: (path: string) => string | null;
   noteStorage: NoteStoragePort;
   signal?: AbortSignal;
 };
@@ -206,6 +183,7 @@ async function createDefaultNote({
   defaultNoteBody,
   deriveTitle,
   sanitizeNoteForSave,
+  resolveBundledDocBody,
   noteStorage,
   signal,
 }: CreateDefaultNoteParams): Promise<CreateDefaultNoteResult> {
@@ -213,7 +191,7 @@ async function createDefaultNote({
   const fallbackNote = sanitizeNoteForSave({
     path: defaultPage,
     title: deriveTitle(defaultPage),
-    body: defaultNoteBody,
+    body: resolveBundledDocBody?.(defaultPage) ?? defaultNoteBody,
     updatedAt: now,
   });
   let statusMessage: string | undefined;
@@ -239,95 +217,19 @@ function createAbortedResult(defaultPage: string): BootstrapNotesResult {
   };
 }
 
-type NoteSeed = {
-  path: string;
-  body: string;
-};
-
-type SeedDefaultNotesParams = {
-  defaultPage: string;
-  defaultNoteBody: string;
-  defaultDocSources: DefaultDocSource[];
-  deriveTitle: (path: string) => string;
-  sanitizeNoteForSave: (note: Note) => Note;
-  noteStorage: NoteStoragePort;
-};
-
-type SeedDefaultNotesResult = {
-  storageUpdated: boolean;
-};
-
-async function seedDefaultNotes({
-  defaultPage,
-  defaultNoteBody,
-  defaultDocSources,
-  deriveTitle,
-  sanitizeNoteForSave,
-  noteStorage,
-}: SeedDefaultNotesParams): Promise<SeedDefaultNotesResult> {
-  const seeds = createDefaultNoteSeeds({
-    defaultPage,
-    defaultNoteBody,
-    defaultDocSources,
-  });
-  if (seeds.length === 0) {
-    return { storageUpdated: false };
+function applyBundledDocBody(
+  note: Note | null,
+  resolveBundledDocBody?: (path: string) => string | null,
+): Note | null {
+  if (!note || !resolveBundledDocBody) {
+    return note;
   }
-  let storageUpdated = false;
-  for (const seed of seeds) {
-    const now = new Date().toISOString();
-    const note = sanitizeNoteForSave({
-      path: seed.path,
-      title: deriveTitle(seed.path),
-      body: seed.body,
-      updatedAt: now,
-    });
-    try {
-      await noteStorage.saveNote(note);
-      storageUpdated = true;
-    } catch (error) {
-      console.error("Failed to seed default notes from bundled docs", error);
-    }
+  const bundledBody = resolveBundledDocBody(note.path);
+  if (bundledBody === null) {
+    return note;
   }
-  return { storageUpdated };
-}
-
-type CreateDefaultNoteSeedsParams = {
-  defaultPage: string;
-  defaultNoteBody: string;
-  defaultDocSources: DefaultDocSource[];
-};
-
-function createDefaultNoteSeeds({
-  defaultPage,
-  defaultNoteBody,
-  defaultDocSources,
-}: CreateDefaultNoteSeedsParams): NoteSeed[] {
-  const seeds = new Map<string, NoteSeed>();
-  seeds.set(defaultPage, { path: defaultPage, body: defaultNoteBody });
-  for (const source of defaultDocSources) {
-    const seed = mapDocSourceToSeed(source, defaultPage);
-    if (!seed) {
-      continue;
-    }
-    if (!seeds.has(seed.path)) {
-      seeds.set(seed.path, seed);
-    }
+  if (note.body === bundledBody) {
+    return note;
   }
-  return Array.from(seeds.values());
-}
-
-function mapDocSourceToSeed(source: DefaultDocSource, defaultPage: string): NoteSeed | null {
-  const match = source.sourcePath.match(/\/docs\/(.+)\.md$/);
-  if (!match) {
-    return null;
-  }
-  const relativePath = match[1];
-  if (relativePath === "index") {
-    return { path: defaultPage, body: source.body };
-  }
-  return {
-    path: normalizePath(`/pages/${relativePath}`),
-    body: source.body,
-  };
+  return { ...note, body: bundledBody };
 }

@@ -4,6 +4,7 @@ import type { AppRoute, NoteStoragePort } from "./ports";
 export type HashRouteGuardParams = {
   deriveTitle: (path: string) => string;
   sanitizeNoteForSave: (note: Note) => Note;
+  resolveBundledDocBody?: (path: string) => string | null;
   noteStorage: Pick<NoteStoragePort, "loadNote" | "saveNote">;
   getCurrentRoute: () => AppRoute | null;
   signal?: AbortSignal;
@@ -21,6 +22,7 @@ export type HashRouteGuardResult = {
 export async function handleHashRouteChange({
   deriveTitle,
   sanitizeNoteForSave,
+  resolveBundledDocBody,
   noteStorage,
   getCurrentRoute,
   signal,
@@ -41,7 +43,7 @@ export async function handleHashRouteChange({
   const newNote = sanitizeNoteForSave({
     path: routeFromHash.path,
     title,
-    body: "",
+    body: resolveBundledDocBody?.(routeFromHash.path) ?? "",
     updatedAt: now,
   });
   let statusMessage: string | undefined;

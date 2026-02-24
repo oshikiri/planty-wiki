@@ -10,6 +10,7 @@ import type { NoteService } from "../services/note-service";
 type UseHashRouteGuardParams = {
   deriveTitle: (path: string) => string;
   sanitizeNoteForSave: (note: Note) => Note;
+  resolveBundledDocBody: (path: string) => string | null;
   setRoute: Dispatch<StateUpdater<Route>>;
   setStatusMessage: Dispatch<StateUpdater<string>>;
   noteService: NoteService;
@@ -26,6 +27,7 @@ type UseHashRouteGuardParams = {
 export function useHashRouteGuard({
   deriveTitle,
   sanitizeNoteForSave,
+  resolveBundledDocBody,
   setRoute,
   setStatusMessage,
   noteService,
@@ -39,6 +41,7 @@ export function useHashRouteGuard({
       handleHashRouteChange({
         deriveTitle,
         sanitizeNoteForSave,
+        resolveBundledDocBody,
         noteStorage: {
           loadNote: (path) => noteService.loadNote(path),
           saveNote: (note) => noteService.saveNote(note),
@@ -79,6 +82,7 @@ export function useHashRouteGuard({
     deriveTitle,
     router,
     sanitizeNoteForSave,
+    resolveBundledDocBody,
     setRoute,
     setStatusMessage,
     noteService,

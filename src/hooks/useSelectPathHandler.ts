@@ -10,6 +10,7 @@ export type UseSelectPathHandlerParams = {
   defaultPage: string;
   deriveTitle: (path: string) => string;
   sanitizeNoteForSave: (note: Note) => Note;
+  resolveBundledDocBody: (path: string) => string | null;
   setDraftBody: Dispatch<StateUpdater<string>>;
   setCurrentNote: Dispatch<StateUpdater<Note | null>>;
   incrementNoteRevision: () => void;
@@ -30,6 +31,7 @@ export function useSelectPathHandler({
   defaultPage,
   deriveTitle,
   sanitizeNoteForSave,
+  resolveBundledDocBody,
   setDraftBody,
   setCurrentNote,
   incrementNoteRevision,
@@ -46,6 +48,7 @@ export function useSelectPathHandler({
         defaultPage,
         deriveTitle,
         sanitizeNoteForSave,
+        resolveBundledDocBody,
         noteStorage: {
           saveNote: (note) => noteService.saveNote(note),
           loadNote: (targetPath) => noteService.loadNote(targetPath),
@@ -77,6 +80,7 @@ export function useSelectPathHandler({
       defaultPage,
       deriveTitle,
       sanitizeNoteForSave,
+      resolveBundledDocBody,
       setDraftBody,
       setCurrentNote,
       incrementNoteRevision,
