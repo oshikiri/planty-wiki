@@ -6,7 +6,7 @@
 .lexical-editor-content {
   min-height: 200px;
   padding: var(--space-xs);
-  font-size: 14px;
+  font-size: 16px;
   font-family: inherit;
   color: var(--text);
   outline: none;
@@ -75,9 +75,9 @@
 
 .lexical-editor-placeholder {
   position: absolute;
-  top: 14px;
-  left: 14px;
+  top: 16px;
+  left: 16px;
   pointer-events: none;
-  font-size: 14px;
+  font-size: 16px;
   color: var(--text-subtle);
 }
