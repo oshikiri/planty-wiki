@@ -5,14 +5,14 @@
 - Tech stack: TypeScript + Preact + Vite + Lexical + SQLite WASM on OPFS.
 - Use English for UI labels, placeholders, status messages, and notifications shown to users.
 - Display and routing:
-  - Route with `/pages/[URL-encoded markdown file name]`.
-  - Create an empty page when routing to a missing page so users can start writing.
-  - Open the SQL query page at `/tools/query` and display SELECT or WITH results in a table.
+    - Route with `/pages/[URL-encoded markdown file name]`.
+    - Create an empty page when routing to a missing page so users can start writing.
+    - Open the SQL query page at `/tools/query` and display SELECT or WITH results in a table.
 
 ## Runtime Environment
 
 - Supported browser: Chrome>=142.
-  - Treat other browsers as unverified.
+    - Treat other browsers as unverified.
 - Do not support incognito or guest mode because data disappears on browser exit.
 - Use a single browser because automatic sync across browsers is not possible.
 - Serve over HTTPS or localhost to enable OPFS.
@@ -20,7 +20,7 @@
 ## Storage and Sync
 
 - Validate and insert import or bulk-save input records one by one.
-  - Fail the entire transaction when an invalid record is found so invalid data never enters the DB.
+    - Fail the entire transaction when an invalid record is found so invalid data never enters the DB.
 - Show a confirmation dialog or an undo bar in delete UIs so data is not removed immediately by mistake.
 - Keep a failed diff instead of discarding it so it can be saved again after recovery.
 - Store data in SQLite WASM as an intermediate table and read and write there in normal operations.
@@ -34,7 +34,7 @@
 
 - Support wiki links in the `[[Page]]` format, emphasize them in the body, and open the page on click.
 - Do not support image embed syntax (`![alt](url)`), and store it as plain text.
-  - Keep accepting `![...]` as a literal string for now, although image embeds may be supported later.
+    - Keep accepting `![...]` as a literal string for now, although image embeds may be supported later.
 - Avoid custom Markdown extensions to maximize portability.
 - See [[planty-wiki markdown syntax]] for details.
 
