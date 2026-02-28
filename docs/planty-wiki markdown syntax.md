@@ -46,7 +46,7 @@ console.log(message);
 - Plain URLs that start with http/https such as `https://example.com` become links automatically.
 - They open in your browser when clicked.
     - Example: Paste `https://developer.chrome.com/` as is and open it in your browser.
-- Wrap a page path in `[[...]]`, such as `[[pages/foo]]`, to create a wiki link.
+- Wrap a page name in `[[...]]`, such as `[[foo]]`, to create a wiki link.
 - Wiki links appear emphasized in the text, and clicking them takes you to the linked page.
 - Notes that link to the current page (backlinks) are grouped in the Backlinks list at the bottom of the editor.
 
