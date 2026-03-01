@@ -24,7 +24,7 @@
     "@lexical/markdown": "0.39.0",
     "@lexical/react": "0.39.0",
     "@lexical/rich-text": "0.39.0",
-    "lexical": "0.39.0",
+    "lexical": "0.41.0",
     "preact": "10.28.4"
   },
   "devDependencies": {
