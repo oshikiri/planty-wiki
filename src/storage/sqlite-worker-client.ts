@@ -20,8 +20,6 @@ const pendingRequests = new Map<
   { resolve: (value: unknown) => void; reject: (reason: unknown) => void }
 >();
 
-export type SqliteWorkerRequestType = WorkerRequestType;
-
 /**
  * Sends a typed request to the SQLite worker and resolves when it responds or times out.
  *
@@ -29,7 +27,7 @@ export type SqliteWorkerRequestType = WorkerRequestType;
  * @param payload Optional payload forwarded to the worker
  * @returns Promise that resolves with the worker result typed as T
  */
-export function callWorker<T>(type: SqliteWorkerRequestType, payload?: unknown): Promise<T> {
+export function callWorker<T>(type: WorkerRequestType, payload?: unknown): Promise<T> {
   const worker = ensureWorker();
   const id = nextRequestId++;
   return new Promise<T>((resolve, reject) => {
