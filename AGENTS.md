@@ -10,7 +10,7 @@
 - レビューを行う際は `review` エージェントを立ち上げてレビューさせる
 
 ## Planty-Wiki
-- 詳細な仕様は docs/README.md に記載する
+- 詳細な仕様は `docs/planty-wiki specification.md` に記載する
 
 ### アーキテクチャ
 - 依存方向は `domain -> usecases -> hooks -> components -> app` とし、外側の層は内側へ依存しても良いが逆方向は禁止する
@@ -24,3 +24,8 @@
 - Markdownの記法ドキュメントでは見出しやリンクなど各カテゴリごとに少なくとも一つ以上の具体的な記述例を併記して読み手がすぐに使い方を理解できるようにする。
   - 例: `## 見出し` と `[[PageLink]]`
 - docs/journals/ にあるマークダウンは更新されないため、最新の仕様については他の箇所を参考にすること
+
+## Git
+- コミットメッセージ
+    - 必ず英語で書く
+    - 書き方は conventional commit に従う
