@@ -22,53 +22,35 @@ type AppProps = {
  * @returns Root application JSX
  */
 export function App({ noteService, queryService, router }: AppProps) {
-  const {
-    noteRevision,
-    noteListRevision,
-    route,
-    selectedNotePath,
-    pendingDeletionPath,
-    statusMessage,
-    editorNote,
-    isDirty,
-    backlinks,
-    handleSelectPath,
-    handleOpenQuery,
-    handleImportMarkdown,
-    handleExportMarkdown,
-    handleChangeDraft,
-    handleRequestDelete,
-    handleCancelDelete,
-    handleDeleteNote,
-  } = useAppController({ noteService, router });
+  const controller = useAppController({ noteService, router });
 
   return (
     <div class={styles.app}>
       <main class={styles.appMain}>
         <Sidebar
           noteService={noteService}
-          noteListRevision={noteListRevision}
-          selectedPath={selectedNotePath}
-          onSelectPath={handleSelectPath}
-          onOpenQuery={handleOpenQuery}
-          onImportMarkdown={handleImportMarkdown}
-          onExportMarkdown={handleExportMarkdown}
-          onDeleteNote={handleRequestDelete}
-          pendingDeletePath={pendingDeletionPath}
-          onCancelDelete={handleCancelDelete}
-          onConfirmDelete={handleDeleteNote}
+          noteListRevision={controller.noteListRevision}
+          selectedPath={controller.selectedNotePath}
+          onSelectPath={controller.handleSelectPath}
+          onOpenQuery={controller.handleOpenQuery}
+          onImportMarkdown={controller.handleImportMarkdown}
+          onExportMarkdown={controller.handleExportMarkdown}
+          onDeleteNote={controller.handleRequestDelete}
+          pendingDeletePath={controller.pendingDeletionPath}
+          onCancelDelete={controller.handleCancelDelete}
+          onConfirmDelete={controller.handleDeleteNote}
         />
-        {route.type === "query" ? (
+        {controller.route.type === "query" ? (
           <QueryPage runQuery={queryService.runQuery} />
         ) : (
           <Editor
-            note={editorNote}
-            noteRevision={noteRevision}
-            onChangeDraft={handleChangeDraft}
-            statusMessage={statusMessage}
-            isDirty={isDirty}
-            backlinks={backlinks}
-            onSelectPath={handleSelectPath}
+            note={controller.editorNote}
+            noteRevision={controller.noteRevision}
+            onChangeDraft={controller.handleChangeDraft}
+            statusMessage={controller.statusMessage}
+            isDirty={controller.isDirty}
+            backlinks={controller.backlinks}
+            onSelectPath={controller.handleSelectPath}
           />
         )}
       </main>
