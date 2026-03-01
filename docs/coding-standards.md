@@ -53,3 +53,8 @@
 - window.location.hashなどブラウザのロケーションAPIへユーザー入力を流すときは、`/pages/`などプレフィックスのスラッシュは保ったまま各セグメント単位でencodeURIComponentを適用してパストラバーサルやXSSを防止すること
 - Wikiリンクや入力パスを扱う際はnormalizePath相当のロジックで`.`や`..`を解決し、常にルート起点の安全なパスだけを保存・遷移させること
 - 外部ソース（Markdown importなど）から取り込むパスも必ずnormalizePath経由で検証し、危険な相対パスや制御文字を弾くこと
+
+## アーキテクチャ
+- 依存方向は `domain -> usecases -> hooks -> components -> app` とし、外側の層は内側へ依存しても良いが逆方向は禁止する
+  - `src/domain` 配下のモジュールは標準ライブラリか同じdomain配下にしか依存してはいけない。`navigation`/`hooks`/`components`/`services`/`storage` へのimportは禁止する
+  - `src/usecases` はdomainやインターフェース型にのみ依存し、`hooks` や UI（`components`/`navigation`）へ依存しないこと

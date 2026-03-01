@@ -1,31 +1,29 @@
 # AGENTS
 
 ## 共通
-- 私とのコミュニケーションは日本語で行うこと。
-- コードコメントは英語で書くこと。
-- 体言止めは使わないこと。文章や箇条書きも動詞終わりにする。
-- 文章を書くときは一文一義を徹底する。長い修飾で読みにくくなったら即座に文を分割して読み手の負荷を減らすこと
+- コードコメント、コミットメッセージ、pull requestのタイトルは英語で書くこと
 - 意図が理解しやすい文章を常に書くこと
+  - 体言止めは使わないこと。文章や箇条書きも動詞終わりにする。
+  - 文章を書くときは一文一義を徹底する。長い修飾で読みにくくなったら即座に文を分割して読み手の負荷を減らすこと
 - 作業の中で `npm install` は実行しないこと
-- レビューを行う際は `review` エージェントを立ち上げてレビューさせる
+- ローカル環境でレビューを行う際は `reviewer` エージェントを立ち上げてレビューさせる
 
-## Planty-Wiki
-- 詳細な仕様は `docs/planty-wiki specification.md` に記載する
+## 作業の完了条件
+js/ts/tsx/cssを更新したあとは、以下を実行しすべてパスすることを確認する
 
-### アーキテクチャ
-- 依存方向は `domain -> usecases -> hooks -> components -> app` とし、外側の層は内側へ依存しても良いが逆方向は禁止する
-  - `src/domain` 配下のモジュールは標準ライブラリか同じdomain配下にしか依存してはいけない。`navigation`/`hooks`/`components`/`services`/`storage` へのimportは禁止する
-  - `src/usecases` はdomainやインターフェース型にのみ依存し、`hooks` や UI（`components`/`navigation`）へ依存しないこと
-
-### ドキュメントの管理
-- 実装計画やREADMEに記載したフェーズの完了状態と実装内容がずれた場合は、コード変更に合わせて計画ドキュメント側も更新すること
-- MarkdownエディタやWiki機能を実装するときはサポートしている記法をドキュメントに一覧化し仕様変更時に必ず更新するようにする。
-  - 例: [[docs/MarkdownSyntax]]
-- Markdownの記法ドキュメントでは見出しやリンクなど各カテゴリごとに少なくとも一つ以上の具体的な記述例を併記して読み手がすぐに使い方を理解できるようにする。
-  - 例: `## 見出し` と `[[PageLink]]`
-- docs/journals/ にあるマークダウンは更新されないため、最新の仕様については他の箇所を参考にすること
+- `npm run lint`
+- `npm run typecheck`
+- `npm run format`
+- `npm run build`
+- `npm test`
 
 ## Git
 - コミットメッセージ
     - 必ず英語で書く
     - 書き方は conventional commit に従う
+
+## Planty-Wiki
+- 詳細な仕様は `docs/planty-wiki specification.md` に記載する
+- MarkdownエディタやWiki機能を変更したときは、必ず[[planty-wiki markdown syntax]]に反映する。
+- Markdownの記法ドキュメントでは少なくとも一つ以上の具体的な記述例を併記して、読み手がすぐに使い方を理解できるようにする。
+  - 例: `## 見出し` と `[[PageLink]]`
