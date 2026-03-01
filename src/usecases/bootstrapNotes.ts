@@ -22,6 +22,9 @@ export type BootstrapNotesResult = {
 
 /**
  * Loads note summaries during the initial boot, determines routing, and fetches the first note body when required.
+ *
+ * @param params Dependencies required to initialize notes and route state
+ * @returns Initial route and note data used by the application boot flow
  */
 export async function bootstrapNotes({
   defaultPage,

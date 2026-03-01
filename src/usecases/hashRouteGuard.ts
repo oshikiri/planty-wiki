@@ -18,6 +18,9 @@ export type HashRouteGuardResult = {
 
 /**
  * Handles hashchange events by checking the route and creating or routing to the note when necessary.
+ *
+ * @param params Dependencies required to resolve and persist a hash-based route
+ * @returns Route update result, or null when the current hash cannot be handled
  */
 export async function handleHashRouteChange({
   deriveTitle,
