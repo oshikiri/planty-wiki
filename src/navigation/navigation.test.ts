@@ -96,7 +96,7 @@ describe("formatHashFromPath", () => {
     expect(formatHashFromPath("")).toBe("#/");
   });
 
-  it.skip("removes traversal and control characters before formatting", () => {
+  it("removes traversal and control characters before formatting", () => {
     expect(formatHashFromPath("/pages/../\u0001unsafe")).toBe("#/unsafe");
   });
 
