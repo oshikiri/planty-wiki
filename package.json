@@ -16,7 +16,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "lint": "biome lint",
-    "format": "biome format --write"
+    "format": "biome format --write",
+    "format:check": "biome format"
   },
   "dependencies": {
     "@lexical/code": "0.41.0",

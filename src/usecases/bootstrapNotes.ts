@@ -76,7 +76,10 @@ export async function bootstrapNotes({
     }
     if (summaries[0]) {
       const route: AppRoute = { kind: "note", path: summaries[0].path };
-      const initialNote = applyBundledDocBody(await noteStorage.loadNote(route.path), resolveBundledDocBody);
+      const initialNote = applyBundledDocBody(
+        await noteStorage.loadNote(route.path),
+        resolveBundledDocBody,
+      );
       return {
         route,
         shouldNavigate: true,
