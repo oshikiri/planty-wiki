@@ -89,8 +89,7 @@ function createNoteFromMarkdownPath(relativePath: string, body: string): Note {
     .filter(Boolean)
     .join("/");
   const notePath = normalizePath(`/pages/${normalizedPath}`);
-  const baseName =
-    normalizedPath.split("/").filter(Boolean).slice(-1)[0] ?? DEFAULT_NOTE_TITLE;
+  const baseName = normalizedPath.split("/").filter(Boolean).slice(-1)[0] ?? DEFAULT_NOTE_TITLE;
   // Always derive the page title from the file name and never rely on headings inside the body.
   return {
     path: notePath,

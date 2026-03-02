@@ -13,10 +13,7 @@ import type { Note, PendingSave } from "../types/note";
 import type { NoteService } from "../services/note-service";
 import type { Router } from "../navigation/router";
 import { buildNote, deriveTitleFromPath } from "../domain/note";
-import {
-  DEFAULT_README_MARKDOWN,
-  resolveBundledDocBody,
-} from "../defaults/initial-docs";
+import { DEFAULT_README_MARKDOWN, resolveBundledDocBody } from "../defaults/initial-docs";
 
 import { useBacklinks, type Backlink } from "./useBacklinks";
 import { useBootstrapNotes } from "./useBootstrapNotes";

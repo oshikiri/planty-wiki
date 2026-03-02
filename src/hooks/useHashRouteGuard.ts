@@ -3,8 +3,8 @@ import { useEffect, type Dispatch, type StateUpdater } from "preact/hooks";
 import type { Note } from "../types/note";
 import type { Route } from "../navigation/route";
 import type { Router } from "../navigation/router";
+import { mapAppRouteToNavigation, mapNavigationRouteToApp } from "../navigation/route-adapter";
 import { handleHashRouteChange } from "../usecases/hashRouteGuard";
-import type { AppRoute } from "../usecases/ports";
 import type { NoteService } from "../services/note-service";
 
 type UseHashRouteGuardParams = {
@@ -88,21 +88,4 @@ export function useHashRouteGuard({
     noteService,
     notifyNoteListRevision,
   ]);
-}
-
-function mapNavigationRouteToApp(route: Route | null): AppRoute | null {
-  if (!route) {
-    return null;
-  }
-  if (route.type === "query") {
-    return { kind: "query" };
-  }
-  return { kind: "note", path: route.path };
-}
-
-function mapAppRouteToNavigation(route: AppRoute): Route {
-  if (route.kind === "query") {
-    return { type: "query" };
-  }
-  return { type: "note", path: route.path };
 }
