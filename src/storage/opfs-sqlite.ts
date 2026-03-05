@@ -7,6 +7,7 @@ import { callWorker } from "./sqlite-worker-client";
  *
  * @returns NoteStorage backed by SQLite
  */
+// biome-ignore lint/complexity/noExcessiveLinesPerFunction: This factory intentionally groups SQLite storage operations.
 export function createSqliteStorage(): NoteStorage {
   return {
     async loadNoteSummaries(): Promise<NoteSummary[]> {

@@ -251,6 +251,7 @@ function SidebarContextMenu({
   );
 }
 
+// biome-ignore lint/complexity/noExcessiveLinesPerFunction: This hook intentionally centralizes context-menu behavior.
 function useSidebarContextMenu(onOpen: (path: string) => void, onDelete: (path: string) => void) {
   const containerRef = useRef<HTMLElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);

@@ -29,6 +29,7 @@ export type UseBootstrapNotesParams = {
  * @param params Object containing dependencies required for bootstrapping (defaultPage, storage APIs, etc.)
  * @returns void
  */
+// biome-ignore lint/complexity/noExcessiveLinesPerFunction: This hook keeps bootstrap side effects in one place.
 export function useBootstrapNotes(params: UseBootstrapNotesParams) {
   const {
     defaultPage,

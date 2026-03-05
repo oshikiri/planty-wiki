@@ -56,6 +56,7 @@ type UseAppControllerResult = {
  * @param params Dependencies such as NoteService and Router
  * @returns UI state and event handlers consumed by the App component
  */
+// biome-ignore lint/complexity/noExcessiveLinesPerFunction: This hook intentionally centralizes app-level orchestration.
 export function useAppController({
   noteService,
   router,

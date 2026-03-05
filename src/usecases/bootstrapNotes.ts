@@ -26,6 +26,7 @@ export type BootstrapNotesResult = {
  * @param params Dependencies required to initialize notes and route state
  * @returns Initial route and note data used by the application boot flow
  */
+// biome-ignore lint/complexity/noExcessiveLinesPerFunction: This use case keeps bootstrap decisions in one flow.
 export async function bootstrapNotes({
   defaultPage,
   defaultNoteBody,
