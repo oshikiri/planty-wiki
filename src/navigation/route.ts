@@ -8,8 +8,8 @@ export const QUERY_ROUTE: Route = { type: "query" };
 /**
  * Restores a Route from a location.hash string, returning null when no route is specified.
  *
- * @param {string} hash Hash string read from window.location.hash
- * @returns {Route | null} Null when the hash is empty
+ * @param hash Hash string read from window.location.hash
+ * @returns Null when the hash is empty
  */
 export function parseHashLocation(hash: string): Route | null {
   const decoded = decodeHash(hash);
@@ -26,8 +26,8 @@ export function parseHashLocation(hash: string): Route | null {
 /**
  * Generates a window.location.hash-friendly string for the given Route.
  *
- * @param {Route} route Destination route
- * @returns {string} Hash string formatted as `#/pages/...`
+ * @param route Destination route
+ * @returns Hash string formatted as `#/pages/...`
  */
 export function formatHashLocation(route: Route): string {
   if (route.type === "query") {
@@ -39,8 +39,8 @@ export function formatHashLocation(route: Route): string {
 /**
  * Decodes a hash string (with `#`) back into a raw string.
  *
- * @param {string} hash Value from window.location.hash
- * @returns {string | null} Decoded hash, or null when empty
+ * @param hash Value from window.location.hash
+ * @returns Decoded hash, or null when empty
  */
 function decodeHash(hash: string): string | null {
   const raw = hash.replace(/^#/, "");
