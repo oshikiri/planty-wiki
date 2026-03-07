@@ -251,7 +251,6 @@ function SidebarContextMenu({
   );
 }
 
-// biome-ignore lint/complexity/noExcessiveLinesPerFunction: This hook intentionally centralizes context-menu behavior.
 function useSidebarContextMenu(onOpen: (path: string) => void, onDelete: (path: string) => void) {
   const containerRef = useRef<HTMLElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -279,21 +278,12 @@ function useSidebarContextMenu(onOpen: (path: string) => void, onDelete: (path: 
     };
   }, [contextMenu, closeContextMenu]);
 
-  const handleContextMenu = useCallback(
-    (event: MouseEvent, path: string) => {
-      event.preventDefault();
-      event.stopPropagation();
-      const containerBounds = containerRef.current?.getBoundingClientRect();
-      const relativeX = containerBounds ? event.clientX - containerBounds.left : event.clientX;
-      const relativeY = containerBounds ? event.clientY - containerBounds.top : event.clientY;
-      const maxX = Math.max(0, (containerBounds?.width ?? window.innerWidth) - 200);
-      const maxY = Math.max(0, (containerBounds?.height ?? window.innerHeight) - 120);
-      const clampedX = Math.max(0, Math.min(relativeX, maxX));
-      const clampedY = Math.max(0, Math.min(relativeY, maxY));
-      setContextMenu({ path, x: clampedX, y: clampedY });
-    },
-    [closeContextMenu],
-  );
+  const handleContextMenu = useCallback((event: MouseEvent, path: string) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const { x, y } = calculateContextMenuPosition(event, containerRef.current);
+    setContextMenu({ path, x, y });
+  }, []);
 
   const handleMenuOpen = useCallback(
     (path: string) => {
@@ -344,4 +334,16 @@ function useSidebarNotes(noteService: NoteService, revision: number): NoteSummar
     };
   }, [noteService, revision]);
   return notes;
+}
+
+function calculateContextMenuPosition(event: MouseEvent, container: HTMLElement | null) {
+  const containerBounds = container?.getBoundingClientRect();
+  const relativeX = containerBounds ? event.clientX - containerBounds.left : event.clientX;
+  const relativeY = containerBounds ? event.clientY - containerBounds.top : event.clientY;
+  const maxX = Math.max(0, (containerBounds?.width ?? window.innerWidth) - 200);
+  const maxY = Math.max(0, (containerBounds?.height ?? window.innerHeight) - 120);
+  return {
+    x: Math.max(0, Math.min(relativeX, maxX)),
+    y: Math.max(0, Math.min(relativeY, maxY)),
+  };
 }
