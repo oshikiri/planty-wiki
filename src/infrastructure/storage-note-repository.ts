@@ -5,7 +5,7 @@ import { createStorage, type NoteStorage } from "../storage";
 /**
  * StorageNoteRepository delegates every NoteRepository call to the injected storage backend.
  */
-export class StorageNoteRepository implements NoteRepository {
+class StorageNoteRepository implements NoteRepository {
   constructor(private readonly storage: NoteStorage) {}
 
   loadSummaries(): Promise<NoteSummary[]> {

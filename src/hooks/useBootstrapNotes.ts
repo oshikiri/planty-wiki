@@ -8,7 +8,7 @@ import { mapAppRouteToNavigation, mapNavigationRouteToApp } from "../navigation/
 import { bootstrapNotes } from "../usecases/bootstrapNotes";
 import type { NoteStoragePort } from "../usecases/ports";
 
-export type UseBootstrapNotesParams = {
+type UseBootstrapNotesParams = {
   defaultPage: string;
   defaultNoteBody: string;
   resolveBundledDocBody: (path: string) => string | null;

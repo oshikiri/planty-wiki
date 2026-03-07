@@ -2,7 +2,7 @@ import type { Note, NoteSummary } from "../domain/note";
 import type { NoteStoragePort } from "./ports";
 import type { PendingSave } from "../types/note";
 
-export type DeleteNoteParams = {
+type DeleteNoteParams = {
   defaultPage: string;
   deriveTitle: (path: string) => string;
   pendingDeletionPath: string | null;
@@ -12,7 +12,7 @@ export type DeleteNoteParams = {
   noteStorage: NoteStoragePort;
 };
 
-export type DeleteNoteResult = {
+type DeleteNoteResult = {
   pendingDeletionPath: string | null;
   pendingSave: PendingSave | null;
   routePath?: string;

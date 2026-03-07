@@ -10,7 +10,7 @@ export interface Note extends NoteSummary {
   body: string;
 }
 
-export type NoteInput = {
+type NoteInput = {
   path: string;
   title?: string | null;
   body?: string | null;

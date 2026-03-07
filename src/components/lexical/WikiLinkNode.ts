@@ -1,7 +1,7 @@
 import { $applyNodeReplacement, TextNode } from "lexical";
 import type { EditorConfig, SerializedTextNode } from "lexical";
 
-export type SerializedWikiLinkNode = SerializedTextNode & {
+type SerializedWikiLinkNode = SerializedTextNode & {
   type: "wikilink";
   version: 1;
 };

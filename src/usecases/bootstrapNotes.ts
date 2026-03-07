@@ -1,7 +1,7 @@
 import type { Note, NoteSummary } from "../domain/note";
 import type { NoteStoragePort, AppRoute } from "./ports";
 
-export type BootstrapNotesParams = {
+type BootstrapNotesParams = {
   defaultPage: string;
   defaultNoteBody: string;
   deriveTitle: (path: string) => string;
@@ -12,7 +12,7 @@ export type BootstrapNotesParams = {
   signal?: AbortSignal;
 };
 
-export type BootstrapNotesResult = {
+type BootstrapNotesResult = {
   route: AppRoute;
   shouldNavigate: boolean;
   initialNote: Note | null;

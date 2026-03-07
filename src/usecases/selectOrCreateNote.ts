@@ -11,7 +11,7 @@ type SelectOrCreateNoteParams = {
   noteStorage: Pick<NoteStoragePort, "saveNote" | "loadNote">;
 };
 
-export type SelectOrCreateNoteResult = {
+type SelectOrCreateNoteResult = {
   note: Note;
   routePath: string;
   statusMessage?: string;

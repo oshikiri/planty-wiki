@@ -12,7 +12,7 @@ const rawDocs = import.meta.glob("../../docs/**/*.md", {
 }) as Record<string, string>;
 
 export const DEFAULT_README_MARKDOWN = rawDocs["../../docs/README.md"] ?? "";
-export const DEFAULT_DOC_SOURCES: DefaultDocSource[] = Object.entries(rawDocs)
+const DEFAULT_DOC_SOURCES: DefaultDocSource[] = Object.entries(rawDocs)
   .filter(([sourcePath]) => !sourcePath.includes("/docs/journals/"))
   .map(([sourcePath, body]) => ({
     sourcePath,
@@ -51,5 +51,3 @@ function mapDocSourceToPath(sourcePath: string): string | null {
   const relativePath = match[1];
   return normalizePath(`/pages/${relativePath}`);
 }
-
-export type { DefaultDocSource };

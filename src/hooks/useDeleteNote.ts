@@ -6,7 +6,7 @@ import type { Note, PendingSave } from "../types/note";
 import type { NoteService } from "../services/note-service";
 import { deletePendingNote } from "../usecases/deleteNote";
 
-export type UseDeleteNoteParams = {
+type UseDeleteNoteParams = {
   defaultPage: string;
   deriveTitle: (path: string) => string;
   pendingDeletionPath: string | null;

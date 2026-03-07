@@ -1,7 +1,7 @@
 import type { Note } from "../domain/note";
 import type { AppRoute, NoteStoragePort } from "./ports";
 
-export type HashRouteGuardParams = {
+type HashRouteGuardParams = {
   deriveTitle: (path: string) => string;
   sanitizeNoteForSave: (note: Note) => Note;
   resolveBundledDocBody?: (path: string) => string | null;
@@ -10,7 +10,7 @@ export type HashRouteGuardParams = {
   signal?: AbortSignal;
 };
 
-export type HashRouteGuardResult = {
+type HashRouteGuardResult = {
   route?: AppRoute;
   statusMessage?: string;
   storageUpdated?: boolean;

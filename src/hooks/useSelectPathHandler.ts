@@ -6,7 +6,7 @@ import type { NoteService } from "../services/note-service";
 import type { Router } from "../navigation/router";
 import { selectOrCreateNote } from "../usecases/selectOrCreateNote";
 
-export type UseSelectPathHandlerParams = {
+type UseSelectPathHandlerParams = {
   defaultPage: string;
   deriveTitle: (path: string) => string;
   sanitizeNoteForSave: (note: Note) => Note;
