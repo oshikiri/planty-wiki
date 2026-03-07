@@ -55,6 +55,7 @@ export function PlantyEditor({
         />
         <ListPlugin />
         <CheckListPlugin />
+        {/* Keep default Lexical tab behavior for list and block indentation. */}
         <TabIndentationPlugin />
         <WikiLinkPlugin onWikiLinkClick={onWikiLinkClick} />
         <UrlAutoLinkPlugin />
