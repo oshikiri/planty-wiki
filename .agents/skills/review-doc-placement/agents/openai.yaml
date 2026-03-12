@@ -1,0 +1,4 @@
+interface:
+  display_name: "Review Doc Placement"
+  short_description: "Review document boundaries and placement"
+  default_prompt: "Use $review-doc-placement to check whether each statement belongs in AGENTS.md, coding standards, specifications, syntax docs, or README."
