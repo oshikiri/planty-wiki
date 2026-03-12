@@ -1,6 +1,0 @@
-[agents.default]
-description = "General-purpose helper."
-
-[agents.reviewer]
-description = "Find security, correctness, and test risks in code."
-config_file = "agents/reviewer.toml"
