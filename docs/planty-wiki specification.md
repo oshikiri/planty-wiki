@@ -71,4 +71,5 @@
 - Place official SQLite WASM artifacts directly under `/public/sqlite3.{js,wasm}` and distribute them with `sqlite-opfs-worker.js` and `sqlite3-opfs-async-proxy.js`.
     - sqlite3 WebAssembly & JavaScript Documentation Index https://sqlite.org/wasm/doc/trunk/index.md
 - Do not support images or attachments at this time.
-- Do not provide full-app installation or offline cache.
+- Support basic PWA installation via web app manifest so users can add the app to their home screen.
+    - Do not provide an offline cache.
