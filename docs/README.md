@@ -8,3 +8,24 @@ It has no server-side application and stores notes in browser storage.
 - [[planty-wiki markdown syntax]]
 - [[coding-standards]]
 - Repository: https://github.com/oshikiri/planty-wiki
+
+
+## How I Count Lines of Code
+
+```
+$ git ls-files -- 'public/sqlite-opfs-worker.js' '*.ts' '*.tsx' ':!'*.test.ts |\
+  xargs cloc
+      47 text files.
+      47 unique files.
+       0 files ignored.
+
+github.com/AlDanial/cloc v 1.98  T=0.01 s (3134.4 files/s, 286898.3 lines/s)
+-------------------------------------------------------------------------------
+Language                     files          blank        comment           code
+-------------------------------------------------------------------------------
+TypeScript                      46            261            317           3159
+JavaScript                       1             37              3            525
+-------------------------------------------------------------------------------
+SUM:                            47            298            320           3684
+-------------------------------------------------------------------------------
+```

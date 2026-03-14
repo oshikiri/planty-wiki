@@ -69,5 +69,6 @@
     - Treat bundled docs as the source of truth and prefer the bundled body over DB content when opening the same `/pages/...` path.
     - Create a missing bundled docs page with the bundled body on open instead of an empty body.
 - Place official SQLite WASM artifacts directly under `/public/sqlite3.{js,wasm}` and distribute them with `sqlite-opfs-worker.js` and `sqlite3-opfs-async-proxy.js`.
+    - sqlite3 WebAssembly & JavaScript Documentation Index https://sqlite.org/wasm/doc/trunk/index.md
 - Do not support images or attachments at this time.
 - Do not provide full-app installation or offline cache.

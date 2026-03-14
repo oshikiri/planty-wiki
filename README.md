@@ -1,5 +1,6 @@
-# planty-wiki: a lightweight note-taking app that runs entirely in the browser
+# planty-wiki
 
+planty-wiki is a lightweight note-taking app that runs entirely in the browser.
 planty-wiki keeps every editing flow inside the browser, so you can write and browse without a native app or a server.
 
 demo page: <https://oshikiri.github.io/planty-wiki/#/pages/README>
@@ -26,16 +27,4 @@ demo page: <https://oshikiri.github.io/planty-wiki/#/pages/README>
 ```sh
 npm clean-install
 npm run dev
-```
-
-## SQLite WASM
-sqlite3 WebAssembly & JavaScript Documentation Index https://sqlite.org/wasm/doc/trunk/index.md
-
-## How I Count Lines of Code
-
-```sh
-git ls-files -- 'public/sqlite-opfs-worker.js' '*.ts' '*.tsx' ':!'*.test.ts |\
-  xargs cloc
-
-# 3607
 ```
