@@ -38,7 +38,7 @@
   "devDependencies": {
     "@biomejs/biome": "2.3.13",
     "@preact/preset-vite": "2.10.3",
-    "@types/node": "25.3.5",
+    "@types/node": "25.5.0",
     "dependency-cruiser": "17.3.8",
     "jsdom": "28.1.0",
     "knip": "5.85.0",
