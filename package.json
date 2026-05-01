@@ -31,7 +31,7 @@
     "@lexical/markdown": "0.42.0",
     "@lexical/react": "0.42.0",
     "@lexical/rich-text": "0.42.0",
-    "@lexical/text": "0.42.0",
+    "@lexical/text": "0.44.0",
     "@lexical/utils": "0.42.0",
     "lexical": "0.42.0",
     "preact": "10.28.4"
