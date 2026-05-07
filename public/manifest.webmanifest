@@ -1,0 +1,16 @@
+{
+  "name": "planty-wiki",
+  "short_name": "planty-wiki",
+  "description": "A lightweight note-taking app running entirely in the browser",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#1c2a36",
+  "theme_color": "#1c2a36",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
