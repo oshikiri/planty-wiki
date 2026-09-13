@@ -7,7 +7,7 @@
   "license": "MIT",
   "author": "oshikiri",
   "engines": {
-    "node": ">=20"
+    "node": "24.x || 26.x"
   },
   "scripts": {
     "dev": "vite",
