@@ -10,7 +10,6 @@
     "noUnusedParameters": true,
     "jsx": "react-jsx",
     "jsxImportSource": "preact",
-    "baseUrl": ".",
     "types": ["vite/client", "vitest/globals"]
   },
   "include": ["src"],
