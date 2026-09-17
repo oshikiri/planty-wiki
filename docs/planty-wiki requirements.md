@@ -10,6 +10,12 @@
     - Open the SQL query page at `/tools/query` and display SELECT or WITH results in a table.
 - [[planty-wiki markdown syntax]]
 - [[Cloud Sync]]
+- [[local-first principle]]
+
+### Implementation stages
+
+- エンドツーエンドの動作を早期に確認するために、初期版はPoCとして実装してよい。
+    - PoCでは簡便な実装を採用し、自動競合解決や必須ではない認証・同期の詳細を後回しにしてよい。ただし、ローカルデータと未同期の変更は失わないようにする。
 
 ## Runtime Environment
 
@@ -18,8 +24,14 @@
 - Do not support incognito or guest mode because data disappears on browser exit.
 - Use a single browser because automatic sync across browsers is not possible.
 - Serve over HTTPS or localhost to enable OPFS.
+- Require network access for the initial launch. After the initial launch completes successfully, allow the app to launch and provide local note features offline.
 
 ## Storage and Sync
+
+- ログイン後、通信復帰時、アプリの実行中に未同期のローカル変更を自動同期する。
+- 同期に失敗した場合はローカルの変更を保持し、後で再送できるようにする。
+- 同期や復旧に必要な履歴と競合データは内部的に保持する。
+- 自動競合解決を長期的な目標とする。どちらの版も失わず、将来の競合解決機能を追加できるデータ構造にする。
 
 - Validate and insert import or bulk-save input records one by one.
     - Fail the entire transaction when an invalid record is found so invalid data never enters the DB.
@@ -66,4 +78,4 @@
 - Place official SQLite WASM artifacts directly under `/public/sqlite3.{js,wasm}` and distribute them with `sqlite-opfs-worker.js` and `sqlite3-opfs-async-proxy.js`.
     - sqlite3 WebAssembly & JavaScript Documentation Index https://sqlite.org/wasm/doc/trunk/index.md
 - Do not support images or attachments at this time.
-- Do not provide full-app installation or offline cache.
+- Do not provide full-app installation. Cache the minimum app resources required for offline launch after the initial online launch.
