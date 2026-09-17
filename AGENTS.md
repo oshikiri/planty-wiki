@@ -11,5 +11,5 @@
     - タグ順序を `概要 -> @param -> @returns` に固定すること
 
 ## Planty-Wiki
-- 詳細な仕様は `docs/planty-wiki specification.md` に記載する
-- MarkdownエディタやWiki機能を変更したときは、必ず `docs/planty-wiki markdown syntax.md` に反映する。
+- 要求は `docs/planty-wiki requirements.md` に記載する
+    - MarkdownエディタやWiki機能を変更したときは、必ず `docs/planty-wiki markdown syntax.md` に反映する。
