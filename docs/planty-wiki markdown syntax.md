@@ -56,3 +56,4 @@ console.log(message);
 - The image embed syntax (`![alt text](url "title")`) is shown as plain text and does not render.
 - Some extended syntax such as tables and footnotes is not supported at this time.
 - When you change Lexical or navigation settings, update this list as well.
+- Avoid custom Markdown extensions to maximize portability.

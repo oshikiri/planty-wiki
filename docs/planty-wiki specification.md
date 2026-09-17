@@ -8,6 +8,7 @@
     - Route with `/pages/[URL-encoded markdown file name]`.
     - Create an empty page when routing to a missing page so users can start writing.
     - Open the SQL query page at `/tools/query` and display SELECT or WITH results in a table.
+- [[planty-wiki markdown syntax]]
 
 ## Runtime Environment
 
@@ -144,14 +145,6 @@ sequenceDiagram
 - Sites上での現行OPFSとログインの動作確認は、実装時の検証項目とする。
 - 対応するスマートフォンのOS・ブラウザは未決定とする。完全なオフライン起動は、今回の同期要件の対象外とする。
 - 履歴の保持上限は、実際の保存容量と利用制限の確認後に決定する。
-
-## Markdown
-
-- Support wiki links in the `[[Page]]` format, emphasize them in the body, and open the page on click.
-- Do not support image embed syntax (`![alt](url)`), and store it as plain text.
-    - Keep accepting `![...]` as a literal string for now, although image embeds may be supported later.
-- Avoid custom Markdown extensions to maximize portability.
-- See [[planty-wiki markdown syntax]] for details.
 
 ## Markdown Editor
 
