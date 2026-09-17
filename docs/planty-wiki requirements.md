@@ -14,8 +14,9 @@
 
 ### Implementation stages
 
-- エンドツーエンドの動作を早期に確認するために、初期版はPoCとして実装してよい。
-    - PoCでは簡便な実装を採用し、自動競合解決や必須ではない認証・同期の詳細を後回しにしてよい。ただし、ローカルデータと未同期の変更は失わないようにする。
+- 初期版は、単一ブラウザーで完結するローカル利用を対象とする。
+- 初期版では、認証、Cloud Sync、複数端末間の同期、競合解決を対象外とする。
+- Cloud Syncは、ローカル版の要求を満たした後に別段階で実装する。
 
 ## Runtime Environment
 
@@ -26,23 +27,20 @@
 - Serve over HTTPS or localhost to enable OPFS.
 - Require network access for the initial launch. After the initial launch completes successfully, allow the app to launch and provide local note features offline.
 
-## Storage and Sync
+## Local Storage
 
-- ログイン後、通信復帰時、アプリの実行中に未同期のローカル変更を自動同期する。
-- 同期に失敗した場合はローカルの変更を保持し、後で再送できるようにする。
-- 同期や復旧に必要な履歴と競合データは内部的に保持する。
-- 自動競合解決を長期的な目標とする。どちらの版も失わず、将来の競合解決機能を追加できるデータ構造にする。
+- ノートはブラウザー内の永続ストレージに保存する。
+- ネットワーク接続やCloud Syncを待たずに、ローカル保存の完了を基準として編集結果を画面へ反映する。
+- 保存に失敗した場合は、編集中の内容を失わず、利用者へ失敗を通知する。
 
 - Validate and insert import or bulk-save input records one by one.
     - Fail the entire transaction when an invalid record is found so invalid data never enters the DB.
 - Show a confirmation dialog or an undo bar in delete UIs so data is not removed immediately by mistake.
-- Keep a failed diff instead of discarding it so it can be saved again after recovery.
 - Store data in SQLite WASM as an intermediate table and read and write there in normal operations.
 - Provide a feature that imports Markdown from a user-selected local directory.
 - Clear the existing SQLite database and overwrite it with the imported content when importing from a Markdown folder.
 - Auto-save and apply changes to SQLite when input pauses for a few seconds during editing.
 - Run Markdown export only when the Export button is pressed, and do not run it during normal auto-save.
-- Ignore the file side on conflicts after import and overwrite with the DB by re-exporting.
 - UIから参照していないDBテーブルやデータ構造は維持せず、不要になった時点で削除して責務をシンプルにする
 
 
