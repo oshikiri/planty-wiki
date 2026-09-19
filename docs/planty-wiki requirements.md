@@ -1,50 +1,50 @@
-# Functional Requirements
+# 機能要求
 
-## Overview
+## 概要
 
-- Tech stack: TypeScript + Preact + Vite + Lexical + SQLite WASM on OPFS.
-- Use English for UI labels, placeholders, status messages, and notifications shown to users.
-- Display and routing:
-    - Route with `/pages/[URL-encoded markdown file name]`.
-    - Create an empty page when routing to a missing page so users can start writing.
-    - Open the SQL query page at `/tools/query` and display SELECT or WITH results in a table.
+- 技術スタックは、TypeScript、Preact、Vite、Lexical、OPFS上のSQLite WASMとする。
+- 利用者に表示するUIラベル、プレースホルダー、ステータスメッセージ、通知は英語にする。
+- 表示とルーティングは、次のとおりとする。
+    - `/pages/[URL-encoded markdown file name]` の形式でルーティングする。
+    - 存在しないページへルーティングした場合は、利用者が書き始められる空のページを作成する。
+    - `/tools/query` でSQLクエリーページを開き、SELECTまたはWITHの結果を表で表示する。
 - [[planty-wiki markdown syntax]]
 - [[Cloud Sync]]
 - [[local-first principle]]
 
-### Implementation stages
+### 実装段階
 
 - 初期版は、単一ブラウザーで完結するローカル利用を対象とする。
 - 初期版では、認証、Cloud Sync、複数端末間の同期、競合解決を対象外とする。
 - Cloud Syncは、ローカル版の要求を満たした後に別段階で実装する。
 
-## Runtime Environment
+## 実行環境
 
-- Supported browser: Chrome>=142.
-    - Treat other browsers as unverified.
-- Do not support incognito or guest mode because data disappears on browser exit.
-- Use a single browser because automatic sync across browsers is not possible.
-- Serve over HTTPS or localhost to enable OPFS.
-- Require network access for the initial launch. After the initial launch completes successfully, allow the app to launch and provide local note features offline.
+- 対応ブラウザーはChrome>=142とする。
+    - その他のブラウザーは動作未検証として扱う。
+- ブラウザー終了時にデータが消えるため、シークレットモードとゲストモードは対応対象外とする。
+- 自動的なブラウザー間同期はできないため、単一のブラウザーで利用する。
+- OPFSを利用できるように、HTTPSまたはlocalhostで配信する。
+- 初回起動にはネットワーク接続を必要とする。初回起動が正常に完了した後は、オフラインでもアプリを起動してローカルのノート機能を利用できるようにする。
 
-## Local Storage
+## ローカルストレージ
 
 - ノートはブラウザー内の永続ストレージに保存する。
 - ネットワーク接続やCloud Syncを待たずに、ローカル保存の完了を基準として編集結果を画面へ反映する。
 - 保存に失敗した場合は、編集中の内容を失わず、利用者へ失敗を通知する。
 
-- Validate and insert import or bulk-save input records one by one.
-    - Fail the entire transaction when an invalid record is found so invalid data never enters the DB.
-- Show a confirmation dialog or an undo bar in delete UIs so data is not removed immediately by mistake.
-- Store data in SQLite WASM as an intermediate table and read and write there in normal operations.
-- Provide a feature that imports Markdown from a user-selected local directory.
-- Clear the existing SQLite database and overwrite it with the imported content when importing from a Markdown folder.
-- Auto-save and apply changes to SQLite when input pauses for a few seconds during editing.
-- Run Markdown export only when the Export button is pressed, and do not run it during normal auto-save.
+- インポートまたは一括保存の入力レコードは、1件ずつ検証して挿入する。
+    - 無効なレコードが見つかった場合はトランザクション全体を失敗させ、無効なデータをDBへ入れない。
+- 削除UIには確認ダイアログまたはUndoバーを表示し、誤操作ですぐにデータを削除しない。
+- データはSQLite WASMの中間テーブルに保存し、通常の操作ではそこから読み書きする。
+- 利用者が選択したローカルディレクトリからMarkdownをインポートできるようにする。
+- Markdownフォルダーをインポートするときは、既存のSQLiteデータベースを消去し、インポート内容で上書きする。
+- 編集中の入力が数秒間止まったときに、自動保存してSQLiteへ変更を反映する。
+- MarkdownのエクスポートはExportボタンを押したときだけ実行し、通常の自動保存では実行しない。
 - UIから参照していないDBテーブルやデータ構造は維持せず、不要になった時点で削除して責務をシンプルにする
 
 
-## Markdown Editor
+## Markdownエディター
 
 - 検索やAPI呼び出しを伴うテキスト入力は300ms程度デバウンスする
     - リクエストIDなどで最新レスポンスのみをUIへ反映して結果の取り違えを防ぐようにする
@@ -53,7 +53,7 @@
 - Markdownのリストインデントは4スペースを前提とし、2スペース記法はサポート対象外とする。Tab入力やImport時も同ルールを徹底する
 - Markdown文字列からの再インポートはノート切り替え時のみ行い、同じノートのautosaveではEditorStateを上書きせずキャレット位置を保持する
 
-## Web Application
+## Webアプリケーション
 
 - フォームや検索入力ではplaceholderだけに頼らず、必ずlabelやaria-labelでスクリーンリーダーに説明を伝えるようにする
 - ストレージやネットワークへの初期化処理では例外が発生してもUI全体が空白にならないようにtry/catchでフォールバックを実装するようにする
@@ -61,19 +61,19 @@
 - バックリンクやWikiリンクの参照関係はSQLiteのlinksテーブルなど補助構造に永続化し、UIはlistBacklinks等のストレージAPI経由で取得するようにして全件走査を避けること
 - ディレクトリインポートやワーカー越しのストレージ操作など長時間処理には並列数の制御・深さ/件数上限・キャンセルプロトコルを必ず設計し、ブラウザをフリーズさせないようにする
 
-## Web Security
+## Webセキュリティ
 
-- window.location.hashなどブラウザのロケーションAPIへユーザー入力を流すときは、`/pages/`などプレフィックスのスラッシュは保ったまま各セグメント単位でencodeURIComponentを適用してパストラバーサルやXSSを防止すること
-- Wikiリンクや入力パスを扱う際はnormalizePath相当のロジックで`.`や`..`を解決し、常にルート起点の安全なパスだけを保存・遷移させること
-- 外部ソース（Markdown importなど）から取り込むパスも必ずnormalizePath経由で検証し、危険な相対パスや制御文字を弾くこと
+- window.location.hashなどブラウザーのロケーションAPIへ利用者の入力を渡すときは、`/pages/`などプレフィックスのスラッシュを保ったまま、各セグメントにencodeURIComponentを適用してパストラバーサルやXSSを防止する。
+- Wikiリンクや入力パスを扱うときは、normalizePath相当のロジックで`.`や`..`を解決し、常にルート起点の安全なパスだけを保存・遷移させる。
+- Markdownインポートなど外部ソースから取り込むパスも、必ずnormalizePathを通して検証し、危険な相対パスや制御文字を拒否する。
 
-## Distribution
+## 配布
 
-- Use ChatGPT Sites for hosting.
-- Bundle Markdown under `docs/` into the app and show it as `/pages/...`.
-    - Treat bundled docs as the source of truth and prefer the bundled body over DB content when opening the same `/pages/...` path.
-    - Create a missing bundled docs page with the bundled body on open instead of an empty body.
-- Place official SQLite WASM artifacts directly under `/public/sqlite3.{js,wasm}` and distribute them with `sqlite-opfs-worker.js` and `sqlite3-opfs-async-proxy.js`.
+- ChatGPT Sitesでホスティングする。
+- `docs/` 以下のMarkdownをアプリにバンドルし、`/pages/...` として表示する。
+    - 同じ `/pages/...` パスを開いたときは、バンドルしたドキュメントを正とし、DBの内容より優先する。
+    - バンドルしたドキュメントが未作成の場合は、空の本文ではなく、バンドルした本文でページを作成する。
+- 公式のSQLite WASM成果物を `/public/sqlite3.{js,wasm}` に直接配置し、`sqlite-opfs-worker.js` と `sqlite3-opfs-async-proxy.js` とともに配布する。
     - sqlite3 WebAssembly & JavaScript Documentation Index https://sqlite.org/wasm/doc/trunk/index.md
-- Do not support images or attachments at this time.
-- Do not provide full-app installation. Cache the minimum app resources required for offline launch after the initial online launch.
+- 現時点では画像と添付ファイルに対応しない。
+- アプリ全体のインストール機能は提供しない。初回オンライン起動後のオフライン起動に必要な最小限のアプリリソースをキャッシュする。
