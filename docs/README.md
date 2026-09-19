@@ -7,7 +7,6 @@ It has no server-side application and stores notes in browser storage.
 - [[planty-wiki requirements]]
 - [[Cloud Sync]]
 - [[planty-wiki markdown syntax]]
-- [[coding-standards]]
 - Repository: https://github.com/oshikiri/planty-wiki
 
 
