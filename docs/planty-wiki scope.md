@@ -6,16 +6,6 @@ Phase 2とPhase 3の検証結果をもとに、Phase 5以降の実装方針を�
 
 完了した Phase は削除する。
 
-## Phase 1: オンラインのローカル版と公開準備
-
-オンライン環境でローカルノートを利用でき、ChatGPT Sitesへ公開できる状態にする。
-
-- [x] ChatGPT Sitesへホスティングできる状態にする。
-
-### 完了条件
-
-- [ ] ChatGPT Sitesで初期版を公開し、オンラインで利用できる。
-
 ## Phase 2: Cloud Sync基盤の実現可能性検証
 
 ChatGPT Sitesの認証・同期API・D1を第一候補として、Cloud Syncの外部基盤を検証する。
