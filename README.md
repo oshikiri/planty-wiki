@@ -28,3 +28,14 @@ demo page: <https://oshikiri.github.io/planty-wiki/#/pages/README>
 npm clean-install
 npm run dev
 ```
+
+## Publish with ChatGPT Sites
+
+The production build uses `/` as its default base path, which is suitable for a ChatGPT Site.
+The publish checklist is described in this section.
+
+In ChatGPT, attach this repository to a Sites request such as:
+
+```text
+@Sites Deploy this project as a website. Check compatibility, save a version for review, and wait for my confirmation before publishing it publicly.
+```

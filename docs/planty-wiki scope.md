@@ -10,7 +10,7 @@ Phase 2とPhase 3の検証結果をもとに、Phase 5以降の実装方針を�
 
 オンライン環境でローカルノートを利用でき、ChatGPT Sitesへ公開できる状態にする。
 
-- [ ] ChatGPT Sitesへホスティングできる状態にする。
+- [x] ChatGPT Sitesへホスティングできる状態にする。
 
 ### 完了条件
 
