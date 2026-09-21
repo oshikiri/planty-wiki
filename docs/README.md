@@ -7,6 +7,7 @@ Planned work includes offline use and Cloud Sync across authorized devices.
 
 - [[planty-wiki requirements]]
   - [[Cloud Sync]]
+  - [[Cloud Sync Phase 2]]
   - [[planty-wiki markdown syntax]]
 - Documentation: https://www.oshikiri.org/planty-wiki/#/pages/README
 - Repository: https://github.com/oshikiri/planty-wiki

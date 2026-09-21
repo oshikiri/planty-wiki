@@ -12,6 +12,6 @@
     "jsxImportSource": "preact",
     "types": ["vite/client", "vitest/globals"]
   },
-  "include": ["src"],
+  "include": ["src", "functions"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

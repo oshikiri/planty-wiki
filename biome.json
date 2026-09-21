@@ -4,6 +4,10 @@
   "files": {
     "includes": [
       "src/**/*",
+      "functions/**/*",
+      "public/probe.html",
+      "public/probe.css",
+      "public/probe.js",
       "*.{ts,json,html}",
       "!docs/",
       "!package-lock.json",

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>planty-wiki Cloud Sync probe</title>
+    <link rel="stylesheet" href="probe.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Cloud Sync probe</h1>
+      <p>
+        This page checks the browser capabilities and the authenticated same-origin probe API.
+        It does not read or write note data.
+      </p>
+      <p>
+        <a href="/signin-with-chatgpt">Sign in with ChatGPT</a>
+        ·
+        <a href="/signout-with-chatgpt">Sign out</a>
+      </p>
+      <section aria-labelledby="results-heading">
+        <h2 id="results-heading">Results</h2>
+        <div id="results" aria-live="polite"></div>
+      </section>
+      <p>
+        API endpoint: <code>/api/sync/probe</code>
+      </p>
+    </main>
+    <script src="probe.js" defer></script>
+  </body>
+</html>
