@@ -1,10 +1,12 @@
 # Planty-wiki Documentation
 
-planty-wiki is a lightweight note-taking app that runs entirely in a local environment.
-It has no server-side application and stores notes in browser storage.
+planty-wiki is a lightweight, local-first note-taking app that runs in the browser.
+It supports Markdown notes, wiki links, backlinks, and folder import/export.
+Notes are currently stored in an OPFS-backed SQLite database.
+Planned work includes offline use and Cloud Sync across authorized devices.
 
-- Documentation: https://www.oshikiri.org/planty-wiki/#/pages/README
 - [[planty-wiki requirements]]
-- [[Cloud Sync]]
-- [[planty-wiki markdown syntax]]
+  - [[Cloud Sync]]
+  - [[planty-wiki markdown syntax]]
+- Documentation: https://www.oshikiri.org/planty-wiki/#/pages/README
 - Repository: https://github.com/oshikiri/planty-wiki
