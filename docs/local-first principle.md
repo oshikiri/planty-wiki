@@ -13,16 +13,16 @@ PoCでは、各原則の実装状況を「未検証」「達成」「部分達�
 
 ## 2. Your work is not trapped on one device -> 満たす
 
-クラウド同期によって、同じユーザーの端末間でノートを同期する。
+クラウド同期によって、同じSiteのアクセスを許可された利用者が複数端末で共有ノートを同期する。
 
 ## 3. The network is optional -> 満たす
 
 初回起動にはネットワーク接続を必要とする。
 初回起動完了後は、未ログインやオフラインの状態でもローカルのノートを閲覧、編集、保存できるようにする。
 
-## 4. Seamless collaboration with your colleagues -> 対象外
+## 4. Seamless collaboration with your colleagues -> 部分的に満たす
 
-利用者は本人だけとし、共有編集とリアルタイム共同編集は対象外とする。
+Siteのアクセスを許可された利用者は同じノートを編集できる。ただし、リアルタイム共同編集は対象外とする。
 
 ## 5. The Long Now -> 部分的に満たす
 
