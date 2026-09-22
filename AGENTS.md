@@ -28,3 +28,7 @@
 ## Planty-Wiki
 - 要求は `docs/planty-wiki requirements.md` に記載する
     - MarkdownエディタやWiki機能を変更したときは、必ず `docs/planty-wiki markdown syntax.md` に反映する。
+
+## ChatGPT Sites
+
+- ChatGPT Sites に関する操作は、必ずユーザーの明示的な許可を得てから行う
