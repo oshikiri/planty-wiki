@@ -11,7 +11,7 @@ export type D1PreparedStatement = {
   run(): Promise<D1Result>;
 };
 
-type SyncDatabase = {
+export type SyncDatabase = {
   prepare(query: string): D1PreparedStatement;
   batch<T extends D1Result>(statements: D1PreparedStatement[]): Promise<T[]>;
 };

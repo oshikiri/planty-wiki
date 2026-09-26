@@ -16,7 +16,8 @@ Phase 3では、認証境界の詳細、オフライン対応、競合解決、�
 
 ChatGPT Sitesで現在のプロジェクトから保存済みの非公開レビュー版を作成する。
 既存のアプリを保持し、D1バインディング名を `DB` にする。
-D1へ `functions/api/sync/schema.sql` の内容を適用する。
+認証済みのPhase 3 APIへの最初のリクエストで、`notes`、`operations`、`changes` の3テーブルを自動作成する。
+`functions/api/sync/schema.sql` は手動適用や構成確認のための定義として保持する。
 
 Siteの保存、D1設定、デプロイはChatGPTのWebまたはデスクトップアプリで行う。
 ChatGPT Sitesに対する操作は、利用者の明示的な許可を得てから実施する。

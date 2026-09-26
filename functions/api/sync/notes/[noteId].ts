@@ -1,4 +1,5 @@
 import { authenticationError, jsonResponse } from "../http";
+import { ensureSyncSchema } from "../schema";
 import type { NoteRow, OperationRow, SyncContext } from "../types";
 import { type NoteMutation, parseNoteMutation } from "../validation";
 
@@ -31,6 +32,7 @@ export async function onRequestPut(context: SyncContext): Promise<Response> {
   }
 
   try {
+    await ensureSyncSchema(context.env.DB);
     const requestHash = await hashMutation(mutation);
     const existingOperation = await findOperation(context, mutation.operationId);
     if (existingOperation) {

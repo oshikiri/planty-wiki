@@ -1,5 +1,6 @@
 import { authenticationError, jsonResponse } from "./http";
 import type { ChangeRow, SyncContext } from "./types";
+import { ensureSyncSchema } from "./schema";
 import { parseNonNegativeInteger } from "./validation";
 
 const DEFAULT_LIMIT = 100;
@@ -29,6 +30,7 @@ export async function onRequestGet(context: SyncContext): Promise<Response> {
   }
 
   try {
+    await ensureSyncSchema(context.env.DB);
     const result = await context.env.DB.prepare(
       `SELECT change_sequence, note_id, version, kind, path, title, body, deleted_at, updated_at
          FROM changes

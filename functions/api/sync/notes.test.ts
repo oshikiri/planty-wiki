@@ -207,7 +207,16 @@ class FakeSyncDatabase {
   }
 
   async batch<T extends D1Result>(statements: D1PreparedStatement[]): Promise<T[]> {
-    const [change, note, operation] = statements as FakePreparedStatement[];
+    const preparedStatements = statements as FakePreparedStatement[];
+    if (
+      preparedStatements.every((statement) =>
+        statement.query.includes("CREATE TABLE IF NOT EXISTS"),
+      )
+    ) {
+      return [] as T[];
+    }
+
+    const [change, note, operation] = preparedStatements;
     const changeValues = change.values;
     const sequence = this.changes.length + 1;
     const deletedAt = changeValues[6] as string | null;
@@ -279,7 +288,7 @@ class FakePreparedStatement implements D1PreparedStatement {
 
   constructor(
     private readonly database: FakeSyncDatabase,
-    private readonly query: string,
+    readonly query: string,
   ) {}
 
   bind(...values: unknown[]): D1PreparedStatement {
