@@ -4,7 +4,12 @@
 
 この文書は、Cloud Syncの同期API契約とD1モデルを定義する。製品としての要求と同期方針は [[Cloud Sync]]、実装範囲と完了条件は [[planty-wiki scope]] に記載する。ChatGPT Sitesが提供する認証と実行環境の仕様は [[ChatGPT Sites]] に記載する。
 
-APIはフロントエンドと同じSiteの `/api/sync/` 配下に置く。Phase 2では認証とD1接続を確認する `probe` だけを配置する。ノート操作、差分同期、同期用D1スキーマはPhase 3で配置する。Phase 2の実サイト検証手順は [[Cloud Sync Phase 2]] に記載する。
+- APIはフロントエンドと同じSiteの `/api/sync/` 配下に置く。
+- Phase 2では、認証とD1接続を確認する `probe` だけを配置する。
+- Phase 3では、ノート操作、差分同期、同期用D1スキーマを配置する。
+- 実装は `functions/api/sync/` と `functions/api/sync/schema.sql` に置く。
+- Phase 2の実サイト検証手順は [[Cloud Sync Phase 2]] に記載する。
+- Phase 3の実サイト検証手順は [[Cloud Sync Phase 3]] に記載する。
 
 ## エンドポイント
 

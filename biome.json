@@ -8,6 +8,7 @@
       "public/probe.html",
       "public/probe.css",
       "public/probe.js",
+      "public/coi-serviceworker.js",
       "*.{ts,json,html}",
       "!docs/",
       "!package-lock.json",
