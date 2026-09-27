@@ -96,27 +96,26 @@ console.log(changesA.status, await changesA.json());
 Site固有のURL、保存済みバージョン、実施日時はGit管理外の
 `docs/Cloud Sync Phase 3.local.md` に記録する。
 
-検証日: 未実施
+検証日: 2026-09-28
 
-保存済みバージョンまたはコミット: 未記録
+保存済みバージョンまたはコミット: v9 / `d65ecd76dfdae0647ba09f74610619604c017361`
 
-Site URL: 未記録
+Site URL: Git管理外の `docs/Cloud Sync Phase 3.local.md` に記録した。
 
 D1バインディング: `DB`
 
 | 確認項目 | 結果 | 証跡・補足 |
 | --- | --- | --- |
-| クライアントAがノートを保存できる | 未実施 | Sites上で確認する。 |
-| クライアントBがノートを取得できる | 未実施 | `GET /api/sync/changes?after=0` で確認する。 |
-| クライアントBが同じノートを更新できる | 未実施 | `baseVersion: 1` で確認する。 |
-| クライアントAが更新結果を取得できる | 未実施 | `GET /api/sync/changes?after=1` で確認する。 |
-| 同じ操作IDの再送が冪等に処理される | 未実施 | 版番号と変更連番が増えないことを確認する。 |
+| クライアントAがノートを保存できる | 確認済み | `version: 1`、`changeSequence: 1` が返った。 |
+| クライアントBがノートを取得できる | 確認済み | `after=0` で `# Client A` の変更を取得できた。 |
+| クライアントBが同じノートを更新できる | 確認済み | `version: 2`、`changeSequence: 2` が返った。 |
+| クライアントAが更新結果を取得できる | 確認済み | `after=1` で `# Client B` の変更を取得できた。 |
+| 同じ操作IDの再送が冪等に処理される | 確認済み | 再送時も `version: 1`、`changeSequence: 1` が返った。 |
 
 ## Phase 3の判定
 
-API実装と自動テストは完了した。
-Sites上の2クライアント検証は、保存済みSiteとD1の設定後に実施する。
-実ブラウザーでの確認が完了するまで、scopeのPhase 3チェックリストは未完了として扱う。
+API実装、自動テスト、Sites上の2クライアント検証が完了した。
+検証結果とSite固有の情報は、Git管理外の `docs/Cloud Sync Phase 3.local.md` に記録した。
 
 ## Phase 4とPhase 5への引き継ぎ
 
