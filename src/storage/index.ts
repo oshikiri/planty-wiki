@@ -1,4 +1,5 @@
 import type { Note, NoteSummary } from "../types/note";
+import type { PendingSyncChange } from "../types/sync";
 import { createSqliteStorage } from "./opfs-sqlite";
 
 export interface NoteStorage {
@@ -7,6 +8,7 @@ export interface NoteStorage {
   loadNotes: () => Promise<Note[]>;
   saveNote: (note: Note) => Promise<void>;
   deleteNote: (path: Note["path"]) => Promise<void>;
+  loadPendingSyncChanges: () => Promise<PendingSyncChange[]>;
   importNotes: (notes: Note[]) => Promise<void>;
   listBacklinks: (targetPath: Note["path"]) => Promise<Note[]>;
 }

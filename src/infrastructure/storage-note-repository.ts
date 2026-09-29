@@ -1,4 +1,5 @@
 import type { NoteRepository } from "../domain/note-repository";
+import type { PendingSyncChange } from "../types/sync";
 import type { Note, NoteSummary } from "../domain/note";
 import { createStorage, type NoteStorage } from "../storage";
 
@@ -26,6 +27,10 @@ class StorageNoteRepository implements NoteRepository {
 
   delete(path: Note["path"]): Promise<void> {
     return this.storage.deleteNote(path);
+  }
+
+  loadPendingSyncChanges(): Promise<PendingSyncChange[]> {
+    return this.storage.loadPendingSyncChanges();
   }
 
   importBatch(notes: Note[]): Promise<void> {

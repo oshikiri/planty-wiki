@@ -59,6 +59,11 @@ self.onmessage = async function (event) {
       return;
     }
 
+    if (type === "loadPendingSyncChanges") {
+      handleLoadPendingSyncChanges(db, id);
+      return;
+    }
+
     if (type === "listBacklinks") {
       handleListBacklinks(db, id, payload);
       return;
@@ -105,6 +110,7 @@ function createOrGetDbPromise() {
             )
           `,
         });
+        initializeSyncStructures(db);
         initializeLinkStructures(db);
         return db;
       } catch (error) {
@@ -190,19 +196,52 @@ function handleSaveNote(db, id, payload) {
     postIfNotCancelled(id, { id: id, ok: false, error: "Invalid note payload" });
     return;
   }
-  db.exec({
-    sql:
-      "INSERT INTO pages (path, title, body, updated_at) VALUES ($path, $title, $body, $updated_at) " +
-      "ON CONFLICT(path) DO UPDATE SET title = excluded.title, body = excluded.body, updated_at = excluded.updated_at",
-    bind: {
-      $path: path,
-      $title: title,
-      $body: body,
-      $updated_at: typeof note.updatedAt === "string" ? note.updatedAt : now,
-    },
-  });
-  replaceLinksForSource(db, path, body);
-  postIfNotCancelled(id, { id: id, ok: true, result: null });
+  var updatedAt = typeof note.updatedAt === "string" ? note.updatedAt : now;
+  var syncNote = findSyncNoteByPath(db, path);
+  var noteId = syncNote ? syncNote.noteId : createSyncNoteId();
+  var baseVersion = syncNote ? syncNote.version : 0;
+  try {
+    db.exec({ sql: "BEGIN" });
+    db.exec({
+      sql:
+        "INSERT INTO pages (path, title, body, updated_at) VALUES ($path, $title, $body, $updated_at) " +
+        "ON CONFLICT(path) DO UPDATE SET title = excluded.title, body = excluded.body, updated_at = excluded.updated_at",
+      bind: {
+        $path: path,
+        $title: title,
+        $body: body,
+        $updated_at: updatedAt,
+      },
+    });
+    replaceLinksForSource(db, path, body);
+    upsertSyncNote(db, {
+      path: path,
+      noteId: noteId,
+      version: syncNote ? syncNote.version : 0,
+      changeSequence: syncNote ? syncNote.changeSequence : 0,
+      deleted: false,
+      updatedAt: updatedAt,
+    });
+    enqueueSyncChange(db, {
+      operationId: createSyncNoteId(),
+      noteId: noteId,
+      path: path,
+      title: title,
+      body: body,
+      deleted: false,
+      baseVersion: baseVersion,
+      createdAt: updatedAt,
+    });
+    db.exec({ sql: "COMMIT" });
+    postIfNotCancelled(id, { id: id, ok: true, result: null });
+  } catch (error) {
+    rollbackTransaction(db);
+    postIfNotCancelled(id, {
+      id: id,
+      ok: false,
+      error: error && error.message ? String(error.message) : "Failed to save note",
+    });
+  }
 }
 
 function extractAndValidateText(value, maxLength, options) {
@@ -231,16 +270,178 @@ function handleDeleteNote(db, id, payload) {
     postIfNotCancelled(id, { id: id, ok: false, error: "Missing note path for delete" });
     return;
   }
-  db.exec({
-    sql: "DELETE FROM pages WHERE path = $path",
-    bind: { $path: path },
-  });
-  db.exec({
-    sql: "DELETE FROM links WHERE source_path = $path",
-    bind: { $path: path },
-  });
-  postIfNotCancelled(id, { id: id, ok: true, result: null });
+  var page = findPageByPath(db, path);
+  if (!page) {
+    postIfNotCancelled(id, { id: id, ok: true, result: null });
+    return;
+  }
+  var syncNote = findSyncNoteByPath(db, path);
+  var noteId = syncNote ? syncNote.noteId : createSyncNoteId();
+  var baseVersion = syncNote ? syncNote.version : 0;
+  var now = new Date().toISOString();
+  try {
+    db.exec({ sql: "BEGIN" });
+    db.exec({
+      sql: "DELETE FROM pages WHERE path = $path",
+      bind: { $path: path },
+    });
+    db.exec({
+      sql: "DELETE FROM links WHERE source_path = $path",
+      bind: { $path: path },
+    });
+    upsertSyncNote(db, {
+      path: path,
+      noteId: noteId,
+      version: syncNote ? syncNote.version : 0,
+      changeSequence: syncNote ? syncNote.changeSequence : 0,
+      deleted: true,
+      updatedAt: now,
+    });
+    enqueueSyncChange(db, {
+      operationId: createSyncNoteId(),
+      noteId: noteId,
+      path: path,
+      title: page.title,
+      body: page.body,
+      deleted: true,
+      baseVersion: baseVersion,
+      createdAt: now,
+    });
+    db.exec({ sql: "COMMIT" });
+    postIfNotCancelled(id, { id: id, ok: true, result: null });
+  } catch (error) {
+    rollbackTransaction(db);
+    postIfNotCancelled(id, {
+      id: id,
+      ok: false,
+      error: error && error.message ? String(error.message) : "Failed to delete note",
+    });
+  }
 }
+
+function handleLoadPendingSyncChanges(db, id) {
+  var changes = [];
+  db.exec({
+    sql:
+      "SELECT operation_id, note_id, path, title, body, deleted, base_version, created_at " +
+      "FROM sync_outbox ORDER BY created_at ASC, operation_id ASC",
+    rowMode: "object",
+    callback: function (row) {
+      if (!row || typeof row !== "object") return;
+      changes.push({
+        operationId: String(row.operation_id || ""),
+        noteId: String(row.note_id || ""),
+        path: String(row.path || ""),
+        title: String(row.title || ""),
+        body: String(row.body || ""),
+        deleted: Number(row.deleted) === 1,
+        baseVersion: Number(row.base_version || 0),
+        createdAt: String(row.created_at || ""),
+      });
+    },
+  });
+  postIfNotCancelled(id, { id: id, ok: true, result: changes });
+}
+
+function findPageByPath(db, path) {
+  var page = null;
+  db.exec({
+    sql: "SELECT path, title, body FROM pages WHERE path = $path LIMIT 1",
+    rowMode: "object",
+    bind: { $path: path },
+    callback: function (row) {
+      if (!row || typeof row !== "object") return;
+      page = {
+        path: String(row.path || ""),
+        title: String(row.title || ""),
+        body: String(row.body || ""),
+      };
+    },
+  });
+  return page;
+}
+
+function findSyncNoteByPath(db, path) {
+  var syncNote = null;
+  db.exec({
+    sql:
+      "SELECT path, note_id, version, change_sequence, deleted, updated_at " +
+      "FROM sync_notes WHERE path = $path LIMIT 1",
+    rowMode: "object",
+    bind: { $path: path },
+    callback: function (row) {
+      if (!row || typeof row !== "object") return;
+      syncNote = {
+        path: String(row.path || ""),
+        noteId: String(row.note_id || ""),
+        version: Number(row.version || 0),
+        changeSequence: Number(row.change_sequence || 0),
+        deleted: Number(row.deleted) === 1,
+        updatedAt: String(row.updated_at || ""),
+      };
+    },
+  });
+  return syncNote;
+}
+
+function upsertSyncNote(db, syncNote) {
+  db.exec({
+    sql:
+      "INSERT INTO sync_notes (path, note_id, version, change_sequence, deleted, updated_at) " +
+      "VALUES ($path, $note_id, $version, $change_sequence, $deleted, $updated_at) " +
+      "ON CONFLICT(path) DO UPDATE SET " +
+      "note_id = excluded.note_id, version = excluded.version, " +
+      "change_sequence = excluded.change_sequence, deleted = excluded.deleted, " +
+      "updated_at = excluded.updated_at",
+    bind: {
+      $path: syncNote.path,
+      $note_id: syncNote.noteId,
+      $version: syncNote.version,
+      $change_sequence: syncNote.changeSequence,
+      $deleted: syncNote.deleted ? 1 : 0,
+      $updated_at: syncNote.updatedAt,
+    },
+  });
+}
+
+function enqueueSyncChange(db, change) {
+  db.exec({
+    sql:
+      "INSERT INTO sync_outbox " +
+      "(operation_id, note_id, path, title, body, deleted, base_version, created_at) " +
+      "VALUES ($operation_id, $note_id, $path, $title, $body, $deleted, $base_version, $created_at) " +
+      "ON CONFLICT(note_id) DO UPDATE SET " +
+      "operation_id = excluded.operation_id, path = excluded.path, " +
+      "title = excluded.title, body = excluded.body, deleted = excluded.deleted, " +
+      "base_version = sync_outbox.base_version, created_at = excluded.created_at",
+    bind: {
+      $operation_id: change.operationId,
+      $note_id: change.noteId,
+      $path: change.path,
+      $title: change.title,
+      $body: change.body,
+      $deleted: change.deleted ? 1 : 0,
+      $base_version: change.baseVersion,
+      $created_at: change.createdAt,
+    },
+  });
+}
+
+function createSyncNoteId() {
+  if (!self.crypto || typeof self.crypto.randomUUID !== "function") {
+    throw new Error("Secure UUID generation is unavailable");
+  }
+  return self.crypto.randomUUID();
+}
+
+function rollbackTransaction(db) {
+  try {
+    db.exec({ sql: "ROLLBACK" });
+  } catch (rollbackError) {
+    console.error("Failed to rollback note transaction", rollbackError);
+  }
+}
+
 
 function handleBulkSaveNotes(db, id, payload) {
   const notes = Array.isArray(payload) ? payload : [];
@@ -408,6 +609,26 @@ function stripTrailingSemicolons(text) {
 function isSelectQuery(text) {
   var normalized = String(text || "").trim().toLowerCase();
   return normalized.indexOf("select") === 0 || normalized.indexOf("with") === 0;
+}
+
+function initializeSyncStructures(db) {
+  db.exec({
+    sql:
+      "CREATE TABLE IF NOT EXISTS sync_notes (" +
+      "path TEXT PRIMARY KEY, note_id TEXT NOT NULL UNIQUE, " +
+      "version INTEGER NOT NULL DEFAULT 0, change_sequence INTEGER NOT NULL DEFAULT 0, " +
+      "deleted INTEGER NOT NULL DEFAULT 0, updated_at TEXT NOT NULL)",
+  });
+  db.exec({
+    sql:
+      "CREATE TABLE IF NOT EXISTS sync_outbox (" +
+      "operation_id TEXT PRIMARY KEY, note_id TEXT NOT NULL, path TEXT NOT NULL, " +
+      "title TEXT NOT NULL, body TEXT NOT NULL, deleted INTEGER NOT NULL DEFAULT 0, " +
+      "base_version INTEGER NOT NULL, created_at TEXT NOT NULL)",
+  });
+  db.exec({
+    sql: "CREATE UNIQUE INDEX IF NOT EXISTS sync_outbox_note_id_idx ON sync_outbox(note_id)",
+  });
 }
 
 function initializeLinkStructures(db) {

@@ -84,6 +84,9 @@ function createInMemoryRepository(initialNotes: Note[]): NoteRepository {
     async delete(path: Note["path"]) {
       notes = notes.filter((note) => note.path !== path);
     },
+    async loadPendingSyncChanges() {
+      return [];
+    },
     async importBatch(imported: Note[]) {
       notes = [...imported];
     },

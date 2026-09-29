@@ -1,3 +1,4 @@
+import type { PendingSyncChange } from "../types/sync";
 import type { Note, NoteSummary } from "./note";
 
 /**
@@ -9,6 +10,7 @@ export interface NoteRepository {
   loadAll(): Promise<Note[]>;
   save(note: Note): Promise<void>;
   delete(path: Note["path"]): Promise<void>;
+  loadPendingSyncChanges(): Promise<PendingSyncChange[]>;
   importBatch(notes: Note[]): Promise<void>;
   listBacklinks(targetPath: Note["path"]): Promise<Note[]>;
 }

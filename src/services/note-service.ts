@@ -5,6 +5,7 @@ import {
   type ImportMarkdownResult,
 } from "../storage/file-bridge";
 import type { Note, NoteSummary } from "../types/note";
+import type { PendingSyncChange } from "../types/sync";
 import type { NoteRepository } from "../domain/note-repository";
 
 export type NoteService = {
@@ -13,6 +14,7 @@ export type NoteService = {
   loadNotes: () => Promise<Note[]>;
   saveNote: (note: Note) => Promise<void>;
   deleteNote: (path: Note["path"]) => Promise<void>;
+  loadPendingSyncChanges: () => Promise<PendingSyncChange[]>;
   importFromDirectory: () => Promise<ImportMarkdownResult>;
   exportToDirectory: (notes: Note[]) => Promise<ExportNotesResult>;
   listBacklinks: (targetPath: Note["path"]) => Promise<Note[]>;
@@ -40,6 +42,9 @@ export function createNoteService(repository: NoteRepository): NoteService {
     },
     async deleteNote(path: Note["path"]) {
       await repository.delete(path);
+    },
+    async loadPendingSyncChanges() {
+      return repository.loadPendingSyncChanges();
     },
     async importFromDirectory() {
       return importMarkdownFromDirectory(repository);
