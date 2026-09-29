@@ -1,3 +1,5 @@
+import { authenticationError } from "./http";
+
 type D1Statement = {
   first<T>(): Promise<T | null>;
 };
@@ -34,10 +36,9 @@ function jsonResponse(body: object, status: number): Response {
  * @returns Probe response with the contract-defined readiness result
  */
 export async function onRequestGet({ request, env }: ProbeContext): Promise<Response> {
-  const authenticatedEmail = request.headers.get("oai-authenticated-user-email");
-
-  if (!authenticatedEmail?.trim()) {
-    return jsonResponse({ error: "unauthorized" }, 401);
+  const authenticationResponse = authenticationError(request);
+  if (authenticationResponse) {
+    return authenticationResponse;
   }
 
   if (!env.DB) {

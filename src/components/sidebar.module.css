@@ -19,6 +19,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .sidebarTitle {
@@ -51,6 +52,21 @@
   border-color: var(--accent);
   background: rgba(124, 58, 237, 0.12);
   color: var(--text);
+}
+
+.cloudSyncStatus {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-basis: 100%;
+  gap: 8px;
+  color: var(--text-subtle);
+  font-size: 11px;
+}
+
+.cloudSyncStatus a {
+  color: var(--accent-2);
+  white-space: nowrap;
 }
 
 .sidebarLists {

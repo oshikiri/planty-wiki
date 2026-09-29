@@ -2,6 +2,7 @@ import type { Ref } from "preact";
 import { useCallback, useEffect, useRef, useState } from "preact/hooks";
 
 import styles from "./sidebar.module.css";
+import { CloudSyncAccess } from "./cloud-sync-access";
 import type { Note, NoteSummary } from "../types/note";
 import type { NoteService } from "../services/note-service";
 
@@ -99,6 +100,7 @@ function SidebarHeader({
           Export
         </button>
       </div>
+      <CloudSyncAccess />
     </header>
   );
 }
