@@ -5,6 +5,30 @@ import type { Note } from "../types/note";
 import type { NoteRepository } from "../domain/note-repository";
 
 describe("NoteService", () => {
+  describe("#loadNoteSummaries", () => {
+    it("loads summaries after the initial sync completes", async () => {
+      const repository = createInMemoryRepository([]);
+      repository.syncPendingChanges = async () => {
+        await repository.save({
+          path: "/pages/remote",
+          title: "Remote",
+          body: "Remote body",
+          updatedAt: "2024-01-02T00:00:00.000Z",
+        });
+        return { status: "synced", syncedChanges: 0, receivedChanges: 1 };
+      };
+      const service = createNoteService(repository);
+
+      await expect(service.loadNoteSummaries()).resolves.toEqual([
+        {
+          path: "/pages/remote",
+          title: "Remote",
+          updatedAt: "2024-01-02T00:00:00.000Z",
+        },
+      ]);
+    });
+  });
+
   describe("#saveNote", () => {
     it("persists the note so other accessors can read it", async () => {
       const service = createInMemoryNoteService();

@@ -30,8 +30,8 @@ export type NoteService = {
 export function createNoteService(repository: NoteRepository): NoteService {
   return {
     async loadNoteSummaries() {
+      await synchronizeBeforeLoadingSummaries(repository);
       const summaries = await repository.loadSummaries();
-      triggerBackgroundSync(repository);
       return summaries;
     },
     async loadNote(path: Note["path"]) {
@@ -70,4 +70,12 @@ function triggerBackgroundSync(repository: NoteRepository) {
   void repository.syncPendingChanges().catch((error) => {
     console.warn("Background Cloud Sync is unavailable", error);
   });
+}
+
+async function synchronizeBeforeLoadingSummaries(repository: NoteRepository) {
+  try {
+    await repository.syncPendingChanges();
+  } catch (error) {
+    console.warn("Initial Cloud Sync is unavailable", error);
+  }
 }
