@@ -87,6 +87,9 @@ function createInMemoryRepository(initialNotes: Note[]): NoteRepository {
     async loadPendingSyncChanges() {
       return [];
     },
+    async syncPendingChanges() {
+      return { status: "idle", syncedChanges: 0, receivedChanges: 0 };
+    },
     async importBatch(imported: Note[]) {
       notes = [...imported];
     },

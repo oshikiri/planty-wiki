@@ -6,6 +6,7 @@ type WorkerRequestType =
   | "bulkSaveNotes"
   | "deleteNote"
   | "loadPendingSyncChanges"
+  | "syncPendingChanges"
   | "listBacklinks"
   | "runQuery";
 

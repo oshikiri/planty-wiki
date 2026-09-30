@@ -8,3 +8,17 @@ export type PendingSyncChange = {
   baseVersion: number;
   createdAt: string;
 };
+
+export type CloudSyncResult =
+  | {
+      status: "idle" | "synced" | "deferred" | "unauthenticated" | "unavailable";
+      syncedChanges: number;
+      receivedChanges: number;
+    }
+  | {
+      status: "conflict";
+      syncedChanges: number;
+      receivedChanges: number;
+      noteId: string;
+      response: unknown;
+    };

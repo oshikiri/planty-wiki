@@ -5,7 +5,7 @@ import {
   type ImportMarkdownResult,
 } from "../storage/file-bridge";
 import type { Note, NoteSummary } from "../types/note";
-import type { PendingSyncChange } from "../types/sync";
+import type { CloudSyncResult, PendingSyncChange } from "../types/sync";
 import type { NoteRepository } from "../domain/note-repository";
 
 export type NoteService = {
@@ -15,6 +15,7 @@ export type NoteService = {
   saveNote: (note: Note) => Promise<void>;
   deleteNote: (path: Note["path"]) => Promise<void>;
   loadPendingSyncChanges: () => Promise<PendingSyncChange[]>;
+  syncPendingChanges: () => Promise<CloudSyncResult>;
   importFromDirectory: () => Promise<ImportMarkdownResult>;
   exportToDirectory: (notes: Note[]) => Promise<ExportNotesResult>;
   listBacklinks: (targetPath: Note["path"]) => Promise<Note[]>;
@@ -29,7 +30,9 @@ export type NoteService = {
 export function createNoteService(repository: NoteRepository): NoteService {
   return {
     async loadNoteSummaries() {
-      return repository.loadSummaries();
+      const summaries = await repository.loadSummaries();
+      triggerBackgroundSync(repository);
+      return summaries;
     },
     async loadNote(path: Note["path"]) {
       return repository.loadByPath(path);
@@ -39,12 +42,17 @@ export function createNoteService(repository: NoteRepository): NoteService {
     },
     async saveNote(note: Note) {
       await repository.save(note);
+      triggerBackgroundSync(repository);
     },
     async deleteNote(path: Note["path"]) {
       await repository.delete(path);
+      triggerBackgroundSync(repository);
     },
     async loadPendingSyncChanges() {
       return repository.loadPendingSyncChanges();
+    },
+    async syncPendingChanges() {
+      return repository.syncPendingChanges();
     },
     async importFromDirectory() {
       return importMarkdownFromDirectory(repository);
@@ -56,4 +64,10 @@ export function createNoteService(repository: NoteRepository): NoteService {
       return repository.listBacklinks(targetPath);
     },
   };
+}
+
+function triggerBackgroundSync(repository: NoteRepository) {
+  void repository.syncPendingChanges().catch((error) => {
+    console.warn("Background Cloud Sync is unavailable", error);
+  });
 }

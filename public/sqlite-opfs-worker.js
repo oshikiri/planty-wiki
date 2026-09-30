@@ -1,6 +1,7 @@
 let dbPromise = null;
 const cancelledRequestIds = new Set();
 const MAX_QUERY_ROWS = 200;
+let syncRequest = Promise.resolve();
 
 self.onmessage = async function (event) {
   const data = event.data || {};
@@ -61,6 +62,11 @@ self.onmessage = async function (event) {
 
     if (type === "loadPendingSyncChanges") {
       handleLoadPendingSyncChanges(db, id);
+      return;
+    }
+
+    if (type === "syncPendingChanges") {
+      handleSyncPendingChanges(db, id);
       return;
     }
 
@@ -320,6 +326,10 @@ function handleDeleteNote(db, id, payload) {
 }
 
 function handleLoadPendingSyncChanges(db, id) {
+  postIfNotCancelled(id, { id: id, ok: true, result: readPendingSyncChanges(db) });
+}
+
+function readPendingSyncChanges(db) {
   var changes = [];
   db.exec({
     sql:
@@ -340,7 +350,510 @@ function handleLoadPendingSyncChanges(db, id) {
       });
     },
   });
-  postIfNotCancelled(id, { id: id, ok: true, result: changes });
+  return changes;
+}
+
+function handleSyncPendingChanges(db, id) {
+  syncRequest = syncRequest
+    .catch(() => undefined)
+    .then(() => runSyncPendingChanges(db))
+    .then((result) => {
+      postIfNotCancelled(id, { id: id, ok: true, result: result });
+    })
+    .catch((error) => {
+      postIfNotCancelled(id, {
+        id: id,
+        ok: false,
+        error: error && error.message ? String(error.message) : "Cloud Sync failed",
+      });
+    });
+}
+
+async function runSyncPendingChanges(db) {
+  var pendingChanges = readPendingSyncChanges(db);
+  var syncedChanges = 0;
+
+  for (const change of pendingChanges) {
+    const result = await sendPendingSyncChange(change);
+    if (result.status !== "synced") {
+      return {
+        ...result,
+        syncedChanges: syncedChanges,
+        receivedChanges: 0,
+      };
+    }
+
+    acknowledgeSyncChange(db, change, result);
+    syncedChanges += 1;
+  }
+
+  const received = await pullRemoteChanges(db);
+  return {
+    ...received,
+    status: received.status === "idle" && syncedChanges > 0 ? "synced" : received.status,
+    syncedChanges: syncedChanges,
+  };
+}
+
+async function sendPendingSyncChange(change) {
+  var requestBody = change.deleted
+    ? {
+        deleted: true,
+        operationId: change.operationId,
+        baseVersion: change.baseVersion,
+      }
+    : {
+        path: change.path,
+        title: change.title,
+        body: change.body,
+        deleted: false,
+        operationId: change.operationId,
+        baseVersion: change.baseVersion,
+      };
+
+  var response;
+  try {
+    response = await fetch(
+      new URL("/api/sync/notes/" + encodeURIComponent(change.noteId), self.location.origin),
+      {
+        method: "PUT",
+        credentials: "same-origin",
+        cache: "no-store",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(requestBody),
+      },
+    );
+  } catch {
+    return { status: "unavailable" };
+  }
+
+  if (response.status === 401) {
+    return { status: "unauthenticated" };
+  }
+
+  var payload = await readResponseJson(response);
+  if (response.status === 409) {
+    return {
+      status: "conflict",
+      noteId: change.noteId,
+      response: payload,
+    };
+  }
+
+  if (!response.ok || !isSyncSuccessPayload(payload, change.operationId)) {
+    return { status: "unavailable" };
+  }
+
+  return {
+    status: "synced",
+    version: payload.version,
+    changeSequence: payload.changeSequence,
+  };
+}
+
+async function readResponseJson(response) {
+  try {
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
+function isSyncSuccessPayload(value, operationId) {
+  return Boolean(
+    value &&
+      typeof value === "object" &&
+      value.operationId === operationId &&
+      Number.isSafeInteger(value.version) &&
+      value.version >= 1 &&
+      Number.isSafeInteger(value.changeSequence) &&
+      value.changeSequence >= 1,
+  );
+}
+
+function acknowledgeSyncChange(db, change, result) {
+  db.exec({ sql: "BEGIN" });
+  try {
+    db.exec({
+      sql:
+        "UPDATE sync_notes SET version = $version, change_sequence = $change_sequence " +
+        "WHERE note_id = $note_id",
+      bind: {
+        $version: result.version,
+        $change_sequence: result.changeSequence,
+        $note_id: change.noteId,
+      },
+    });
+    db.exec({
+      sql:
+        "UPDATE sync_outbox SET base_version = $version " +
+        "WHERE note_id = $note_id AND operation_id <> $operation_id",
+      bind: {
+        $version: result.version,
+        $note_id: change.noteId,
+        $operation_id: change.operationId,
+      },
+    });
+    db.exec({
+      sql: "DELETE FROM sync_outbox WHERE operation_id = $operation_id",
+      bind: { $operation_id: change.operationId },
+    });
+    db.exec({ sql: "COMMIT" });
+  } catch (error) {
+    rollbackTransaction(db);
+    throw error;
+  }
+}
+
+
+async function pullRemoteChanges(db) {
+  var cursor = readSyncCursor(db);
+  var receivedChanges = 0;
+
+  while (true) {
+    var response;
+    try {
+      response = await fetch(
+        new URL("/api/sync/changes?after=" + cursor + "&limit=100", self.location.origin),
+        {
+          method: "GET",
+          credentials: "same-origin",
+          cache: "no-store",
+        },
+      );
+    } catch {
+      return {
+        status: "unavailable",
+        syncedChanges: 0,
+        receivedChanges: receivedChanges,
+      };
+    }
+
+    if (response.status === 401) {
+      return {
+        status: "unauthenticated",
+        syncedChanges: 0,
+        receivedChanges: receivedChanges,
+      };
+    }
+
+    var payload = await readResponseJson(response);
+    if (!response.ok || !isChangesPayload(payload, cursor)) {
+      return {
+        status: "unavailable",
+        syncedChanges: 0,
+        receivedChanges: receivedChanges,
+      };
+    }
+
+    var applied = applyRemoteChanges(db, payload.changes, cursor);
+    receivedChanges += applied.receivedChanges;
+    cursor = applied.nextAfter;
+
+    if (applied.status !== "synced") {
+      return {
+        ...applied,
+        syncedChanges: 0,
+        receivedChanges: receivedChanges,
+      };
+    }
+
+    if (!payload.hasMore) {
+      return {
+        status: receivedChanges > 0 ? "synced" : "idle",
+        syncedChanges: 0,
+        receivedChanges: receivedChanges,
+      };
+    }
+  }
+}
+
+function isChangesPayload(value, cursor) {
+  const nextAfterIsValid =
+    value?.hasMore === true ? value.nextAfter > cursor : value.nextAfter >= cursor;
+  const hasRowsWhenMore =
+    value?.hasMore !== true || (Array.isArray(value?.changes) && value.changes.length > 0);
+  return Boolean(
+    value &&
+      typeof value === "object" &&
+      Array.isArray(value.changes) &&
+      Number.isSafeInteger(value.nextAfter) &&
+      nextAfterIsValid &&
+      hasRowsWhenMore &&
+      typeof value.hasMore === "boolean",
+  );
+}
+
+function applyRemoteChanges(db, changes, cursor) {
+  var receivedChanges = 0;
+  var nextAfter = cursor;
+  db.exec({ sql: "BEGIN" });
+  try {
+    for (const change of changes) {
+      if (!isRemoteChange(change, nextAfter)) {
+        throw new Error("Invalid Cloud Sync change");
+      }
+
+      if (hasPendingSyncChange(db, change.noteId)) {
+        if (nextAfter !== cursor) {
+          writeSyncCursor(db, nextAfter);
+        }
+        db.exec({ sql: "COMMIT" });
+        return {
+          status: "deferred",
+          nextAfter: nextAfter,
+          receivedChanges: receivedChanges,
+        };
+      }
+
+      if (isAlreadyAppliedChange(db, change)) {
+        nextAfter = change.changeSequence;
+        continue;
+      }
+
+      const conflict = applyRemoteChange(db, change);
+      if (conflict) {
+        rollbackTransaction(db);
+        return {
+          status: "conflict",
+          noteId: change.noteId,
+          response: conflict,
+          nextAfter: nextAfter,
+          receivedChanges: receivedChanges,
+        };
+      }
+
+      nextAfter = change.changeSequence;
+      receivedChanges += 1;
+    }
+
+    if (nextAfter !== cursor) {
+      writeSyncCursor(db, nextAfter);
+    }
+    db.exec({ sql: "COMMIT" });
+    return {
+      status: "synced",
+      nextAfter: nextAfter,
+      receivedChanges: receivedChanges,
+    };
+  } catch (error) {
+    rollbackTransaction(db);
+    throw error;
+  }
+}
+
+function isRemoteChange(change, previousSequence) {
+  return Boolean(
+    change &&
+      typeof change === "object" &&
+      Number.isSafeInteger(change.changeSequence) &&
+      change.changeSequence > previousSequence &&
+      typeof change.noteId === "string" &&
+      Number.isSafeInteger(change.version) &&
+      change.version >= 1 &&
+      typeof change.updatedAt === "string" &&
+      (change.kind === "upsert" || change.kind === "delete"),
+  );
+}
+
+function hasPendingSyncChange(db, noteId) {
+  var pending = null;
+  db.exec({
+    sql: "SELECT operation_id FROM sync_outbox WHERE note_id = $note_id LIMIT 1",
+    rowMode: "object",
+    bind: { $note_id: noteId },
+    callback: function (row) {
+      if (row && typeof row === "object") {
+        pending = row;
+      }
+    },
+  });
+  return Boolean(pending);
+}
+
+function isAlreadyAppliedChange(db, change) {
+  var syncNote = findSyncNoteById(db, change.noteId);
+  if (syncNote && syncNote.changeSequence >= change.changeSequence) {
+    return true;
+  }
+
+  var deletedNote = findDeletedSyncNote(db, change.noteId);
+  return Boolean(deletedNote && deletedNote.changeSequence >= change.changeSequence);
+}
+
+function applyRemoteChange(db, change) {
+  if (change.kind === "delete") {
+    return applyRemoteDelete(db, change);
+  }
+  return applyRemoteUpsert(db, change);
+}
+
+function applyRemoteUpsert(db, change) {
+  if (
+    typeof change.path !== "string" ||
+    typeof change.title !== "string" ||
+    typeof change.body !== "string" ||
+    typeof change.updatedAt !== "string"
+  ) {
+    return { error: "invalid_remote_change", noteId: change.noteId };
+  }
+
+  var pathConflict = findSyncNoteByPath(db, change.path);
+  if (pathConflict && pathConflict.noteId !== change.noteId) {
+    return { error: "path_conflict", noteId: change.noteId, path: change.path };
+  }
+
+  var current = findSyncNoteById(db, change.noteId);
+  if (current && current.path !== change.path) {
+    db.exec({
+      sql: "DELETE FROM pages WHERE path = $path",
+      bind: { $path: current.path },
+    });
+    db.exec({
+      sql: "DELETE FROM links WHERE source_path = $path",
+      bind: { $path: current.path },
+    });
+    db.exec({
+      sql: "DELETE FROM sync_notes WHERE path = $path",
+      bind: { $path: current.path },
+    });
+  }
+
+  db.exec({
+    sql:
+      "INSERT INTO pages (path, title, body, updated_at) VALUES ($path, $title, $body, $updated_at) " +
+      "ON CONFLICT(path) DO UPDATE SET title = excluded.title, body = excluded.body, " +
+      "updated_at = excluded.updated_at",
+    bind: {
+      $path: change.path,
+      $title: change.title,
+      $body: change.body,
+      $updated_at: change.updatedAt,
+    },
+  });
+  replaceLinksForSource(db, change.path, change.body);
+  upsertSyncNote(db, {
+    path: change.path,
+    noteId: change.noteId,
+    version: change.version,
+    changeSequence: change.changeSequence,
+    deleted: false,
+    updatedAt: change.updatedAt,
+  });
+  db.exec({
+    sql: "DELETE FROM sync_deleted_notes WHERE note_id = $note_id",
+    bind: { $note_id: change.noteId },
+  });
+  return null;
+}
+
+function applyRemoteDelete(db, change) {
+  var current = findSyncNoteById(db, change.noteId);
+  if (current) {
+    db.exec({
+      sql: "DELETE FROM pages WHERE path = $path",
+      bind: { $path: current.path },
+    });
+    db.exec({
+      sql: "DELETE FROM links WHERE source_path = $path",
+      bind: { $path: current.path },
+    });
+    upsertSyncNote(db, {
+      path: current.path,
+      noteId: change.noteId,
+      version: change.version,
+      changeSequence: change.changeSequence,
+      deleted: true,
+      updatedAt: change.updatedAt,
+    });
+    return null;
+  }
+
+  db.exec({
+    sql:
+      "INSERT INTO sync_deleted_notes " +
+      "(note_id, version, change_sequence, deleted_at, updated_at) " +
+      "VALUES ($note_id, $version, $change_sequence, $deleted_at, $updated_at) " +
+      "ON CONFLICT(note_id) DO UPDATE SET version = excluded.version, " +
+      "change_sequence = excluded.change_sequence, deleted_at = excluded.deleted_at, " +
+      "updated_at = excluded.updated_at",
+    bind: {
+      $note_id: change.noteId,
+      $version: change.version,
+      $change_sequence: change.changeSequence,
+      $deleted_at: typeof change.deletedAt === "string" ? change.deletedAt : null,
+      $updated_at: change.updatedAt,
+    },
+  });
+  return null;
+}
+
+function readSyncCursor(db) {
+  var cursor = 0;
+  db.exec({
+    sql: "SELECT state_value FROM sync_state WHERE state_key = 'change_sequence' LIMIT 1",
+    rowMode: "object",
+    callback: function (row) {
+      if (row && typeof row === "object") {
+        cursor = Number(row.state_value || 0);
+      }
+    },
+  });
+  return Number.isSafeInteger(cursor) && cursor >= 0 ? cursor : 0;
+}
+
+function writeSyncCursor(db, cursor) {
+  db.exec({
+    sql:
+      "INSERT INTO sync_state (state_key, state_value) VALUES ('change_sequence', $value) " +
+      "ON CONFLICT(state_key) DO UPDATE SET state_value = excluded.state_value",
+    bind: { $value: cursor },
+  });
+}
+
+function findSyncNoteById(db, noteId) {
+  var syncNote = null;
+  db.exec({
+    sql:
+      "SELECT path, note_id, version, change_sequence, deleted, updated_at " +
+      "FROM sync_notes WHERE note_id = $note_id LIMIT 1",
+    rowMode: "object",
+    bind: { $note_id: noteId },
+    callback: function (row) {
+      if (!row || typeof row !== "object") return;
+      syncNote = {
+        path: String(row.path || ""),
+        noteId: String(row.note_id || ""),
+        version: Number(row.version || 0),
+        changeSequence: Number(row.change_sequence || 0),
+        deleted: Number(row.deleted) === 1,
+        updatedAt: String(row.updated_at || ""),
+      };
+    },
+  });
+  return syncNote;
+}
+
+function findDeletedSyncNote(db, noteId) {
+  var deletedNote = null;
+  db.exec({
+    sql:
+      "SELECT note_id, version, change_sequence, deleted_at, updated_at " +
+      "FROM sync_deleted_notes WHERE note_id = $note_id LIMIT 1",
+    rowMode: "object",
+    bind: { $note_id: noteId },
+    callback: function (row) {
+      if (!row || typeof row !== "object") return;
+      deletedNote = {
+        noteId: String(row.note_id || ""),
+        version: Number(row.version || 0),
+        changeSequence: Number(row.change_sequence || 0),
+        deletedAt: row.deleted_at === null ? null : String(row.deleted_at || ""),
+        updatedAt: String(row.updated_at || ""),
+      };
+    },
+  });
+  return deletedNote;
 }
 
 function findPageByPath(db, path) {
@@ -628,6 +1141,22 @@ function initializeSyncStructures(db) {
   });
   db.exec({
     sql: "CREATE UNIQUE INDEX IF NOT EXISTS sync_outbox_note_id_idx ON sync_outbox(note_id)",
+  });
+  db.exec({
+    sql:
+      "CREATE TABLE IF NOT EXISTS sync_deleted_notes (" +
+      "note_id TEXT PRIMARY KEY, version INTEGER NOT NULL, " +
+      "change_sequence INTEGER NOT NULL, deleted_at TEXT, updated_at TEXT NOT NULL)",
+  });
+  db.exec({
+    sql:
+      "CREATE TABLE IF NOT EXISTS sync_state (" +
+      "state_key TEXT PRIMARY KEY, state_value INTEGER NOT NULL)",
+  });
+  db.exec({
+    sql:
+      "INSERT OR IGNORE INTO sync_state (state_key, state_value) " +
+      "VALUES ('change_sequence', 0)",
   });
 }
 

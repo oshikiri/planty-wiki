@@ -1,6 +1,6 @@
 import type { NoteStorage } from "./index";
 import type { Note, NoteSummary } from "../types/note";
-import type { PendingSyncChange } from "../types/sync";
+import type { CloudSyncResult, PendingSyncChange } from "../types/sync";
 import { callWorker } from "./sqlite-worker-client";
 
 /**
@@ -75,6 +75,14 @@ export function createSqliteStorage(): NoteStorage {
         return (await callWorker<PendingSyncChange[]>("loadPendingSyncChanges")) ?? [];
       } catch (error) {
         console.error("Failed to load pending Cloud Sync changes.", error);
+        throw error;
+      }
+    },
+    async syncPendingChanges(): Promise<CloudSyncResult> {
+      try {
+        return await callWorker<CloudSyncResult>("syncPendingChanges");
+      } catch (error) {
+        console.error("Failed to sync pending Cloud Sync changes.", error);
         throw error;
       }
     },
