@@ -2,7 +2,7 @@
 
 ## 位置づけ
 
-この文書は、Cloud Syncの同期API契約とD1モデルを定義する。製品としての要求と同期方針は [[Cloud Sync]]、今後の対応範囲は [[planty-wiki scope]] に記載する。ChatGPT Sitesが提供する認証と実行環境の仕様は [[ChatGPT Sites]] に記載する。
+この文書は、Cloud Syncの同期API契約とD1モデルを定義する。製品としての要求と同期方針は [[Cloud Sync]] に記載する。ChatGPT Sitesが提供する認証と実行環境の仕様は [[ChatGPT Sites]] に記載する。
 
 - APIはフロントエンドと同じSiteの `/api/sync/` 配下に置く。
 - `GET /api/sync/probe` は認証とD1接続を確認する。

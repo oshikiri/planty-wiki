@@ -7,7 +7,7 @@
 
 Cloud Syncは、Siteのアクセス設定で許可された利用者が同じノート空間を利用する単一データ領域モデルとする。利用者ごとのデータ分離、権限分け、リアルタイム共同編集は対象外とする。公開Siteは採用しない。
 
-ChatGPT Sitesの前提は [[ChatGPT Sites]]、同期APIの入出力、エラー、入力制約、D1スキーマは [[Cloud Sync API]] に記載する。今後の対応範囲は [[planty-wiki scope]] に記載する。
+ChatGPT Sitesの前提は [[ChatGPT Sites]]、同期APIの入出力、エラー、入力制約、D1スキーマは [[Cloud Sync API]] に記載する。
 
 ## 認証とアクセス制御
 

@@ -11,7 +11,6 @@
 - [[planty-wiki markdown syntax]]
 - [[planty-wiki local storage]]
 - [[planty-wiki security requirements]]
-- [[planty-wiki scope]]
 - [[Cloud Sync]]
 - [[local-first principle]]
 
