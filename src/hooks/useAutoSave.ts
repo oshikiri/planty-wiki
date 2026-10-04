@@ -17,7 +17,7 @@ type UseAutoSaveParams = {
  * Failed saves are captured in a retry state so the next effect cycle can reattempt the same work.
  *
  * @param params Dependencies required for auto-save such as pendingSave and saveNote
- * @returns void
+ * @returns Whether a save is pending, retrying, or in flight
  */
 export function useAutoSave({
   pendingSave,
@@ -30,6 +30,7 @@ export function useAutoSave({
 }: UseAutoSaveParams) {
   // Keep failed saves in retrySnapshot, independent from pendingSave, so they can be retried once storage recovers.
   const [retrySnapshot, setRetrySnapshot] = useState<PendingSave | null>(null);
+  const [savingCount, setSavingCount] = useState(0);
 
   useEffect(() => {
     return scheduleAutoSaveEffect({
@@ -42,6 +43,7 @@ export function useAutoSave({
       setStatusMessage,
       setRetrySnapshot,
       notifyNotePersisted,
+      setSavingCount,
     });
   }, [
     pendingSave,
@@ -53,6 +55,7 @@ export function useAutoSave({
     saveNote,
     notifyNotePersisted,
   ]);
+  return Boolean(pendingSave || retrySnapshot || savingCount > 0);
 }
 
 /**
@@ -68,6 +71,7 @@ type ScheduleParams = {
   setStatusMessage: Dispatch<StateUpdater<string>>;
   setRetrySnapshot: Dispatch<StateUpdater<PendingSave | null>>;
   notifyNotePersisted: () => void;
+  setSavingCount: Dispatch<StateUpdater<number>>;
 };
 
 /**
@@ -107,7 +111,9 @@ async function runAutoSaveTask({
   setStatusMessage,
   setRetrySnapshot,
   notifyNotePersisted,
+  setSavingCount,
 }: TaskParams) {
+  setSavingCount((count) => count + 1);
   if (!isRetrying) {
     clearPendingSnapshot(snapshot, setPendingSave);
   }
@@ -134,6 +140,8 @@ async function runAutoSaveTask({
     console.error("Failed to persist note via save queue", error);
     setStatusMessage("Failed to auto-save changes");
     queueSnapshotForRetry(snapshot, setRetrySnapshot);
+  } finally {
+    setSavingCount((count) => count - 1);
   }
 }
 

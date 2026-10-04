@@ -10,6 +10,7 @@ type EditorProps = {
   onChangeDraft: (value: string) => void;
   statusMessage: string;
   isDirty: boolean;
+  isReadOnly?: boolean;
   backlinks: Backlink[];
   onSelectPath: (path: string) => void;
 };
@@ -22,6 +23,7 @@ type EditorProps = {
  * @param props.onChangeDraft Handler fired when the editor content changes
  * @param props.statusMessage Latest status message shown below the editor
  * @param props.isDirty Whether the local draft has unsaved changes
+ * @param props.isReadOnly Whether editing is temporarily disabled during conflict resolution
  * @param props.backlinks List of pages that reference the current note
  * @param props.onSelectPath Navigation handler invoked from backlinks
  * @returns JSX containing the editor and related elements
@@ -40,6 +42,7 @@ export function Editor(props: EditorProps) {
           noteKey={`${props.note.path}:${props.noteRevision}`}
           initialMarkdown={props.note.body}
           onMarkdownChange={props.onChangeDraft}
+          isReadOnly={props.isReadOnly}
           onWikiLinkClick={props.onSelectPath}
         />
         <BacklinksSection backlinks={props.backlinks} onSelectPath={props.onSelectPath} />

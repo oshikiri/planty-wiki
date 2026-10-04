@@ -12,6 +12,7 @@ if (rootElement) {
   try {
     const repository = createOpfsNoteRepository();
     const noteService = createNoteService(repository);
+    noteService.startSyncLifecycle();
     const queryService = createQueryService();
     const router = createHashRouter();
     render(

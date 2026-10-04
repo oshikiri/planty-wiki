@@ -30,10 +30,15 @@ export function App({ noteService, queryService, router }: AppProps) {
         <Sidebar
           noteService={noteService}
           noteListRevision={controller.noteListRevision}
+          canResolveConflict={controller.canResolveConflict}
+          onResolveConflict={controller.handleResolveSyncConflict}
           selectedPath={controller.selectedNotePath}
           onSelectPath={controller.handleSelectPath}
           onOpenQuery={controller.handleOpenQuery}
           onImportMarkdown={controller.handleImportMarkdown}
+          onCancelImport={controller.handleCancelImport}
+          isImporting={controller.isImporting}
+          canCancelImport={controller.canCancelImport}
           onExportMarkdown={controller.handleExportMarkdown}
           onDeleteNote={controller.handleRequestDelete}
           pendingDeletePath={controller.pendingDeletionPath}
@@ -49,6 +54,7 @@ export function App({ noteService, queryService, router }: AppProps) {
             onChangeDraft={controller.handleChangeDraft}
             statusMessage={controller.statusMessage}
             isDirty={controller.isDirty}
+            isReadOnly={controller.isResolvingConflict}
             backlinks={controller.backlinks}
             onSelectPath={controller.handleSelectPath}
           />

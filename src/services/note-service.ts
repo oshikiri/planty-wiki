@@ -5,7 +5,13 @@ import {
   type ImportMarkdownResult,
 } from "../storage/file-bridge";
 import type { Note, NoteSummary } from "../types/note";
-import type { CloudSyncResult, PendingSyncChange } from "../types/sync";
+import type {
+  CloudSyncResult,
+  PendingSyncChange,
+  SyncConflict,
+  NoteChangeEvent,
+} from "../types/sync";
+import { createSyncController } from "./sync-controller";
 import type { NoteRepository } from "../domain/note-repository";
 
 export type NoteService = {
@@ -15,8 +21,15 @@ export type NoteService = {
   saveNote: (note: Note) => Promise<void>;
   deleteNote: (path: Note["path"]) => Promise<void>;
   loadPendingSyncChanges: () => Promise<PendingSyncChange[]>;
+  loadSyncConflicts: () => Promise<SyncConflict[]>;
+  resolveSyncConflict: (noteId: string, choice: "local" | "server", path?: string) => Promise<void>;
   syncPendingChanges: () => Promise<CloudSyncResult>;
-  importFromDirectory: () => Promise<ImportMarkdownResult>;
+  startSyncLifecycle: () => () => void;
+  subscribeToChanges: (listener: (event: NoteChangeEvent) => void | Promise<void>) => () => void;
+  importFromDirectory: (
+    signal?: AbortSignal,
+    onSaving?: () => void,
+  ) => Promise<ImportMarkdownResult>;
   exportToDirectory: (notes: Note[]) => Promise<ExportNotesResult>;
   listBacklinks: (targetPath: Note["path"]) => Promise<Note[]>;
 };
@@ -28,9 +41,51 @@ export type NoteService = {
  * @returns NoteService that delegates to the repository
  */
 export function createNoteService(repository: NoteRepository): NoteService {
+  const listeners = new Set<(event: NoteChangeEvent) => void | Promise<void>>();
+  const notify = async (event: NoteChangeEvent) => {
+    await Promise.all([...listeners].map((listener) => listener(event)));
+  };
+  const sync = createSyncController(
+    () => repository.syncPendingChanges(),
+    (result) => {
+      if (result.receivedChanges > 0) {
+        void notify({ type: "sync" }).catch((error) =>
+          console.error("Failed to refresh synchronized notes", error),
+        );
+      }
+    },
+  );
+  const triggerSync = () => {
+    void sync.run().catch((error) => console.warn("Background Cloud Sync is unavailable", error));
+  };
+  return {
+    ...createNoteAccessors(repository, sync.run),
+    ...createNoteMutations(repository, triggerSync, notify),
+    ...createMarkdownTransfer(repository),
+    loadPendingSyncChanges: () => repository.loadPendingSyncChanges(),
+    loadSyncConflicts: () => repository.loadSyncConflicts(),
+    syncPendingChanges: sync.run,
+    startSyncLifecycle: sync.start,
+    subscribeToChanges(listener) {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+  };
+}
+
+function createNoteAccessors(
+  repository: NoteRepository,
+  synchronize: () => Promise<CloudSyncResult>,
+) {
   return {
     async loadNoteSummaries() {
-      await synchronizeBeforeLoadingSummaries(repository);
+      try {
+        await synchronize();
+      } catch (error) {
+        console.warn("Initial Cloud Sync is unavailable", error);
+      }
       const summaries = await repository.loadSummaries();
       return summaries;
     },
@@ -40,42 +95,41 @@ export function createNoteService(repository: NoteRepository): NoteService {
     async loadNotes() {
       return repository.loadAll();
     },
-    async saveNote(note: Note) {
-      await repository.save(note);
-      triggerBackgroundSync(repository);
-    },
-    async deleteNote(path: Note["path"]) {
-      await repository.delete(path);
-      triggerBackgroundSync(repository);
-    },
-    async loadPendingSyncChanges() {
-      return repository.loadPendingSyncChanges();
-    },
-    async syncPendingChanges() {
-      return repository.syncPendingChanges();
-    },
-    async importFromDirectory() {
-      return importMarkdownFromDirectory(repository);
-    },
-    async exportToDirectory(notes: Note[]) {
-      return exportNotesToDirectory(notes);
-    },
     async listBacklinks(targetPath: Note["path"]) {
       return repository.listBacklinks(targetPath);
     },
   };
 }
 
-function triggerBackgroundSync(repository: NoteRepository) {
-  void repository.syncPendingChanges().catch((error) => {
-    console.warn("Background Cloud Sync is unavailable", error);
-  });
+function createNoteMutations(
+  repository: NoteRepository,
+  triggerSync: () => void,
+  notify: (event: NoteChangeEvent) => Promise<void>,
+) {
+  return {
+    async saveNote(note: Note) {
+      await repository.save(note);
+      triggerSync();
+    },
+    async deleteNote(path: Note["path"]) {
+      await repository.delete(path);
+      triggerSync();
+    },
+    async resolveSyncConflict(noteId: string, choice: "local" | "server", path?: string) {
+      const result = await repository.resolveSyncConflict(noteId, choice, path);
+      await notify({ type: "resolution", ...result });
+      triggerSync();
+    },
+  };
 }
 
-async function synchronizeBeforeLoadingSummaries(repository: NoteRepository) {
-  try {
-    await repository.syncPendingChanges();
-  } catch (error) {
-    console.warn("Initial Cloud Sync is unavailable", error);
-  }
+function createMarkdownTransfer(repository: NoteRepository) {
+  return {
+    async importFromDirectory(signal?: AbortSignal, onSaving?: () => void) {
+      return importMarkdownFromDirectory(repository, signal, onSaving);
+    },
+    async exportToDirectory(notes: Note[]) {
+      return exportNotesToDirectory(notes);
+    },
+  };
 }

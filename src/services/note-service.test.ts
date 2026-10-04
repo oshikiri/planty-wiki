@@ -111,6 +111,12 @@ function createInMemoryRepository(initialNotes: Note[]): NoteRepository {
     async loadPendingSyncChanges() {
       return [];
     },
+    async loadSyncConflicts() {
+      return [];
+    },
+    async resolveSyncConflict() {
+      return { previousPath: "/pages/test", path: "/pages/test" };
+    },
     async syncPendingChanges() {
       return { status: "idle", syncedChanges: 0, receivedChanges: 0 };
     },
@@ -122,3 +128,24 @@ function createInMemoryRepository(initialNotes: Note[]): NoteRepository {
     },
   };
 }
+
+it("waits for the resolved version to reach the UI before completing resolution", async () => {
+  const repository = createInMemoryRepository([]);
+  const service = createNoteService(repository);
+  const events: string[] = [];
+  let complete!: () => void;
+  service.subscribeToChanges(async (event) => {
+    events.push(event.type);
+    await new Promise<void>((resolve) => {
+      complete = resolve;
+    });
+  });
+  const resolution = service
+    .resolveSyncConflict("note-id", "server")
+    .then(() => events.push("complete"));
+  await Promise.resolve();
+  expect(events).toEqual(["resolution"]);
+  complete();
+  await resolution;
+  expect(events).toEqual(["resolution", "complete"]);
+});

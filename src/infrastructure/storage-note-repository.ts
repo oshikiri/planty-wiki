@@ -1,5 +1,10 @@
 import type { NoteRepository } from "../domain/note-repository";
-import type { CloudSyncResult, PendingSyncChange } from "../types/sync";
+import type {
+  CloudSyncResult,
+  PendingSyncChange,
+  SyncConflict,
+  SyncConflictResolution,
+} from "../types/sync";
 import type { Note, NoteSummary } from "../domain/note";
 import { createStorage, type NoteStorage } from "../storage";
 
@@ -31,6 +36,18 @@ class StorageNoteRepository implements NoteRepository {
 
   loadPendingSyncChanges(): Promise<PendingSyncChange[]> {
     return this.storage.loadPendingSyncChanges();
+  }
+
+  loadSyncConflicts(): Promise<SyncConflict[]> {
+    return this.storage.loadSyncConflicts();
+  }
+
+  resolveSyncConflict(
+    noteId: string,
+    choice: "local" | "server",
+    path?: string,
+  ): Promise<SyncConflictResolution> {
+    return this.storage.resolveSyncConflict(noteId, choice, path);
   }
 
   syncPendingChanges(): Promise<CloudSyncResult> {

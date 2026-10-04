@@ -2,6 +2,7 @@ import type { Ref } from "preact";
 import { useCallback, useEffect, useRef, useState } from "preact/hooks";
 
 import styles from "./sidebar.module.css";
+import { CloudSyncConflicts } from "./cloud-sync-conflicts";
 import { CloudSyncAccess } from "./cloud-sync-access";
 import type { Note, NoteSummary } from "../types/note";
 import type { NoteService } from "../services/note-service";
@@ -9,10 +10,15 @@ import type { NoteService } from "../services/note-service";
 type SidebarProps = {
   noteService: NoteService;
   noteListRevision: number;
+  canResolveConflict: boolean;
+  onResolveConflict: (noteId: string, choice: "local" | "server", path?: string) => Promise<void>;
   selectedPath: string | null;
   onSelectPath: (path: string) => void;
   onOpenQuery: () => void;
   onImportMarkdown: () => void;
+  onCancelImport: () => void;
+  isImporting: boolean;
+  canCancelImport: boolean;
   onExportMarkdown: () => void;
   onDeleteNote: (path: Note["path"]) => void;
   pendingDeletePath?: string | null;
@@ -35,6 +41,9 @@ type ContextMenuState = {
  * @param props.selectedPath Currently opened note path
  * @param props.onSelectPath Handler invoked when a note item is clicked
  * @param props.onImportMarkdown Callback to trigger directory import
+ * @param props.onCancelImport Callback to cancel an active directory import
+ * @param props.isImporting Whether a directory import is active
+ * @param props.canCancelImport Whether the import is still in its cancellable read phase
  * @param props.onExportMarkdown Callback to trigger directory export
  * @param props.onDeleteNote Handler that requests note deletion
  * @param props.pendingDeletePath Path of the note awaiting deletion confirmation (if any)
@@ -49,8 +58,16 @@ export function Sidebar(props: SidebarProps) {
     <nav class={styles.sidebar} ref={contextMenu.containerRef}>
       <SidebarHeader
         onImport={props.onImportMarkdown}
+        onCancelImport={props.onCancelImport}
+        isImporting={props.isImporting}
+        canCancelImport={props.canCancelImport}
         onExport={props.onExportMarkdown}
         onOpenQuery={props.onOpenQuery}
+      />
+      <CloudSyncConflicts
+        noteService={props.noteService}
+        canResolve={props.canResolveConflict}
+        onResolve={props.onResolveConflict}
       />
       <SidebarList
         notes={notes}
@@ -79,10 +96,16 @@ export function Sidebar(props: SidebarProps) {
 
 function SidebarHeader({
   onImport,
+  onCancelImport,
+  isImporting,
+  canCancelImport,
   onExport,
   onOpenQuery,
 }: {
   onImport: () => void;
+  onCancelImport: () => void;
+  isImporting: boolean;
+  canCancelImport: boolean;
   onExport: () => void;
   onOpenQuery: () => void;
 }) {
@@ -93,8 +116,13 @@ function SidebarHeader({
         <button type="button" class={styles.sidebarActionButton} onClick={onOpenQuery}>
           Query
         </button>
-        <button type="button" class={styles.sidebarActionButton} onClick={onImport}>
-          Import
+        <button
+          type="button"
+          class={styles.sidebarActionButton}
+          onClick={isImporting ? onCancelImport : onImport}
+          disabled={isImporting && !canCancelImport}
+        >
+          {isImporting ? (canCancelImport ? "Cancel Import" : "Saving Import...") : "Import"}
         </button>
         <button type="button" class={styles.sidebarActionButton} onClick={onExport}>
           Export

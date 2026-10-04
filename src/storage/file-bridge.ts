@@ -2,6 +2,7 @@ import { normalizePath } from "../navigation";
 import type { Note } from "../types/note";
 import type { NoteRepository } from "../domain/note-repository";
 import { DEFAULT_NOTE_TITLE } from "../domain/note";
+import { DIRECTORY_IMPORT_LIMITS } from "../types/sync";
 
 type DirectoryFileEntry = {
   relativePath: string;
@@ -12,6 +13,8 @@ export type ImportMarkdownResult =
   | { status: "unsupported" }
   | { status: "no-markdown" }
   | { status: "success"; importedCount: number; notes: Note[] }
+  | { status: "cancelled" }
+  | { status: "limit-exceeded"; limit: "depth" | "files" | "file-size" | "total-size" }
   | { status: "failed" };
 
 export type ExportNotesResult =
@@ -24,10 +27,14 @@ export type ExportNotesResult =
  * Reads Markdown files from a user-selected directory and applies them to the note storage.
  *
  * @param repository Implementation of NoteRepository
+ * @param signal Optional cancellation signal for the directory walk and file reads
+ * @param onSaving Callback invoked when cancellable reads finish and saving begins
  * @returns Result of the import operation
  */
 export async function importMarkdownFromDirectory(
   repository: NoteRepository,
+  signal?: AbortSignal,
+  onSaving?: () => void,
 ): Promise<ImportMarkdownResult> {
   const anyWindow = window as typeof window & { showDirectoryPicker?: () => Promise<unknown> };
   if (typeof anyWindow.showDirectoryPicker !== "function") {
@@ -36,14 +43,16 @@ export async function importMarkdownFromDirectory(
   try {
     const dirHandle =
       (await anyWindow.showDirectoryPicker()) as unknown as FileSystemDirectoryHandle;
-    const entries = await collectDirectoryEntries(dirHandle);
+    const entries = await collectDirectoryEntries(dirHandle, signal);
     const markdownFiles = entries.filter((entry) =>
       entry.relativePath.toLowerCase().endsWith(".md"),
     );
     if (!markdownFiles.length) {
       return { status: "no-markdown" };
     }
-    const importedNotes = await importMarkdownFiles(markdownFiles);
+    const importedNotes = await importMarkdownFiles(markdownFiles, signal);
+    throwIfAborted(signal);
+    onSaving?.();
     await repository.importBatch(importedNotes);
     const updated = await repository.loadAll();
     return {
@@ -52,6 +61,12 @@ export async function importMarkdownFromDirectory(
       notes: updated,
     };
   } catch (error) {
+    if (isAbortError(error, signal)) {
+      return { status: "cancelled" };
+    }
+    if (error instanceof ImportLimitError) {
+      return { status: "limit-exceeded", limit: error.limit };
+    }
     console.error("Failed to import Markdown notes", error);
     return { status: "failed" };
   }
@@ -110,23 +125,40 @@ function toMarkdownRelativePath(notePath: string): string {
 
 async function collectDirectoryEntries(
   root: FileSystemDirectoryHandle,
+  signal?: AbortSignal,
 ): Promise<DirectoryFileEntry[]> {
   const results: DirectoryFileEntry[] = [];
-  async function walkDirectory(dir: FileSystemDirectoryHandle, prefix: string) {
+  let totalBytes = 0;
+  async function walkDirectory(dir: FileSystemDirectoryHandle, prefix: string, depth: number) {
+    throwIfAborted(signal);
+    if (depth > DIRECTORY_IMPORT_LIMITS.maxDepth) {
+      throw new ImportLimitError("depth");
+    }
     for await (const [name, handle] of dir.entries()) {
+      throwIfAborted(signal);
       const nextPath = prefix ? `${prefix}/${name}` : name;
       if ((handle as FileSystemFileHandle).kind === "file") {
+        if (results.length >= DIRECTORY_IMPORT_LIMITS.maxFiles) {
+          throw new ImportLimitError("files");
+        }
         const fileHandle = handle as FileSystemFileHandle;
         const file = await fileHandle.getFile();
+        if (file.size > DIRECTORY_IMPORT_LIMITS.maxFileBytes) {
+          throw new ImportLimitError("file-size");
+        }
+        totalBytes += file.size;
+        if (totalBytes > DIRECTORY_IMPORT_LIMITS.maxTotalBytes) {
+          throw new ImportLimitError("total-size");
+        }
         results.push({ relativePath: nextPath, file });
         continue;
       }
       if ((handle as FileSystemDirectoryHandle).kind === "directory") {
-        await walkDirectory(handle as FileSystemDirectoryHandle, nextPath);
+        await walkDirectory(handle as FileSystemDirectoryHandle, nextPath, depth + 1);
       }
     }
   }
-  await walkDirectory(root, "");
+  await walkDirectory(root, "", 0);
   return results;
 }
 
@@ -134,11 +166,16 @@ function normalizeEntryPath(value: string): string {
   return value.replace(/\\/g, "/");
 }
 
-async function importMarkdownFiles(markdownFiles: DirectoryFileEntry[]): Promise<Note[]> {
+async function importMarkdownFiles(
+  markdownFiles: DirectoryFileEntry[],
+  signal?: AbortSignal,
+): Promise<Note[]> {
   const importedNotes: Note[] = [];
   for (const fileEntry of markdownFiles) {
+    throwIfAborted(signal);
     const normalizedPath = normalizeEntryPath(fileEntry.relativePath);
     const text = await fileEntry.file.text();
+    throwIfAborted(signal);
     const note = createNoteFromMarkdownPath(normalizedPath, text);
     importedNotes.push(note);
   }
@@ -179,4 +216,20 @@ async function createWritableFile(
   }
   const fileHandle = await currentDir.getFileHandle(fileName, { create: true });
   return fileHandle.createWritable();
+}
+
+class ImportLimitError extends Error {
+  constructor(readonly limit: "depth" | "files" | "file-size" | "total-size") {
+    super(`Directory import ${limit} limit exceeded`);
+  }
+}
+
+function throwIfAborted(signal?: AbortSignal): void {
+  if (signal?.aborted) {
+    throw new DOMException("Directory import was cancelled", "AbortError");
+  }
+}
+
+function isAbortError(error: unknown, signal?: AbortSignal): boolean {
+  return Boolean(signal?.aborted || (error instanceof DOMException && error.name === "AbortError"));
 }

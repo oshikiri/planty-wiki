@@ -11,6 +11,7 @@ import { DEFAULT_PAGE_PATH } from "../navigation/constants";
 import { QUERY_ROUTE, type Route } from "../navigation/route";
 import type { Note, PendingSave } from "../types/note";
 import type { NoteService } from "../services/note-service";
+import type { ImportMarkdownResult } from "../storage/file-bridge";
 import type { Router } from "../navigation/router";
 import { buildNote, deriveTitleFromPath } from "../domain/note";
 import { DEFAULT_README_MARKDOWN, resolveBundledDocBody } from "../defaults/initial-docs";
@@ -21,6 +22,7 @@ import { useSelectPathHandler } from "./useSelectPathHandler";
 import { useDeleteNote } from "./useDeleteNote";
 import { useAutoSave } from "./useAutoSave";
 import { useHashRouteGuard } from "./useHashRouteGuard";
+import { useSyncNoteUpdates } from "./useSyncNoteUpdates";
 import { useStatusMessage } from "./useStatusMessage";
 
 const EMPTY_NOTE: Note = { path: "", title: "", body: "" };
@@ -43,6 +45,16 @@ type UseAppControllerResult = {
   handleSelectPath: (path: string) => void;
   handleOpenQuery: () => void;
   handleImportMarkdown: () => Promise<void>;
+  handleCancelImport: () => void;
+  isImporting: boolean;
+  canCancelImport: boolean;
+  isResolvingConflict: boolean;
+  canResolveConflict: boolean;
+  handleResolveSyncConflict: (
+    noteId: string,
+    choice: "local" | "server",
+    path?: string,
+  ) => Promise<void>;
   handleExportMarkdown: () => Promise<void>;
   handleChangeDraft: (nextBody: string) => void;
   handleRequestDelete: (path: string) => void;
@@ -144,6 +156,8 @@ export function useAppController({
     }
     setDraftBody("");
   }, [route]);
+  const [isResolvingConflict, setIsResolvingConflict] = useState(false);
+  const resolvingConflictRef = useRef(false);
   const [pendingSave, setPendingSave] = useState<PendingSave | null>(null);
   useBootstrapNotes({
     defaultPage: DEFAULT_PAGE_PATH,
@@ -181,9 +195,10 @@ export function useAppController({
 
   const handleChangeDraft = useCallback(
     (nextBody: string) => {
-      if (!currentNote) {
+      if (!currentNote || resolvingConflictRef.current) {
         return;
       }
+      if (nextBody === currentNote.body && nextBody === draftBody) return;
       setDraftBody(nextBody);
       setPendingSave({
         path: currentNote.path,
@@ -191,10 +206,10 @@ export function useAppController({
         body: nextBody,
       });
     },
-    [currentNote],
+    [currentNote, draftBody],
   );
 
-  useAutoSave({
+  const hasPendingSave = useAutoSave({
     pendingSave,
     sanitizeNoteForSave,
     setPendingSave,
@@ -203,6 +218,36 @@ export function useAppController({
     setStatusMessage,
     notifyNotePersisted: incrementNoteListRevision,
   });
+
+  useSyncNoteUpdates({
+    noteService,
+    router,
+    route,
+    currentNote,
+    hasPendingChanges: hasPendingSave || isDirty || isResolvingConflict,
+    setCurrentNote,
+    setDraftBody,
+    setRoute,
+    incrementNoteRevision,
+    incrementNoteListRevision,
+    setStatusMessage,
+  });
+  const handleResolveSyncConflict = useCallback(
+    async (noteId: string, choice: "local" | "server", path?: string) => {
+      if (hasPendingSave || isDirty || resolvingConflictRef.current) {
+        throw new Error("Wait for local changes to finish saving before resolving the conflict");
+      }
+      resolvingConflictRef.current = true;
+      setIsResolvingConflict(true);
+      try {
+        await noteService.resolveSyncConflict(noteId, choice, path);
+      } finally {
+        resolvingConflictRef.current = false;
+        setIsResolvingConflict(false);
+      }
+    },
+    [hasPendingSave, isDirty, noteService],
+  );
 
   useHashRouteGuard({
     deriveTitle,
@@ -215,7 +260,13 @@ export function useAppController({
     notifyNoteListRevision: incrementNoteListRevision,
   });
 
-  const { handleImportMarkdown, handleExportMarkdown } = useMarkdownTransfer({
+  const {
+    handleImportMarkdown,
+    handleCancelImport,
+    isImporting,
+    canCancelImport,
+    handleExportMarkdown,
+  } = useMarkdownTransfer({
     noteService,
     notifyNoteListRevision: incrementNoteListRevision,
     showTemporaryStatus,
@@ -273,6 +324,12 @@ export function useAppController({
     handleSelectPath,
     handleOpenQuery,
     handleImportMarkdown,
+    handleCancelImport,
+    isImporting,
+    canCancelImport,
+    isResolvingConflict,
+    canResolveConflict: !hasPendingSave && !isDirty && !isResolvingConflict,
+    handleResolveSyncConflict,
     handleExportMarkdown,
     handleChangeDraft,
     handleRequestDelete,
@@ -321,30 +378,45 @@ function useMarkdownTransfer({
   showTemporaryStatus: (message: string) => void;
 }): {
   handleImportMarkdown: () => Promise<void>;
+  handleCancelImport: () => void;
+  isImporting: boolean;
+  canCancelImport: boolean;
   handleExportMarkdown: () => Promise<void>;
 } {
+  const importControllerRef = useRef<AbortController | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
+  const [canCancelImport, setCanCancelImport] = useState(false);
+  const savingImportRef = useRef(false);
+
   const handleImportMarkdown = useCallback(async () => {
+    if (importControllerRef.current) {
+      return;
+    }
+    const controller = new AbortController();
+    importControllerRef.current = controller;
+    setIsImporting(true);
+    setCanCancelImport(true);
+    savingImportRef.current = false;
     try {
-      const result = await noteService.importFromDirectory();
-      if (result.status === "success") {
-        notifyNoteListRevision();
-        showTemporaryStatus(`Imported ${result.importedCount} notes from folder`);
-        return;
-      }
-      if (result.status === "no-markdown") {
-        showTemporaryStatus("No Markdown files found in the selected folder");
-        return;
-      }
-      if (result.status === "unsupported") {
-        showTemporaryStatus("This browser does not support directory access");
-        return;
-      }
-      showTemporaryStatus("Failed to import Markdown notes");
+      const result = await noteService.importFromDirectory(controller.signal, () => {
+        savingImportRef.current = true;
+        setCanCancelImport(false);
+      });
+      if (result.status === "success") notifyNoteListRevision();
+      showTemporaryStatus(importStatusMessage(result));
     } catch (error) {
       console.error("Failed to import Markdown notes", error);
       showTemporaryStatus("Failed to import Markdown notes");
+    } finally {
+      importControllerRef.current = null;
+      setIsImporting(false);
+      setCanCancelImport(false);
     }
   }, [noteService, notifyNoteListRevision, showTemporaryStatus]);
+
+  const handleCancelImport = useCallback(() => {
+    if (!savingImportRef.current) importControllerRef.current?.abort();
+  }, []);
 
   const handleExportMarkdown = useCallback(async () => {
     try {
@@ -369,5 +441,23 @@ function useMarkdownTransfer({
     }
   }, [noteService, showTemporaryStatus]);
 
-  return { handleImportMarkdown, handleExportMarkdown };
+  return {
+    handleImportMarkdown,
+    handleCancelImport,
+    isImporting,
+    canCancelImport,
+    handleExportMarkdown,
+  };
+}
+
+function importStatusMessage(result: ImportMarkdownResult): string {
+  if (result.status === "success") return `Imported ${result.importedCount} notes from folder`;
+  const messages = {
+    "no-markdown": "No Markdown files found in the selected folder",
+    unsupported: "This browser does not support directory access",
+    cancelled: "Markdown import cancelled",
+    "limit-exceeded": "The selected folder exceeds the import limits",
+    failed: "Failed to import Markdown notes",
+  };
+  return messages[result.status];
 }

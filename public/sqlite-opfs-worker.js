@@ -1,6 +1,7 @@
 let dbPromise = null;
 const cancelledRequestIds = new Set();
 const MAX_QUERY_ROWS = 200;
+const SYNC_INPUT_LIMITS = { path: 512, title: 1024, body: 50000 };
 let syncRequest = Promise.resolve();
 
 self.onmessage = async function (event) {
@@ -62,6 +63,16 @@ self.onmessage = async function (event) {
 
     if (type === "loadPendingSyncChanges") {
       handleLoadPendingSyncChanges(db, id);
+      return;
+    }
+
+    if (type === "loadSyncConflicts") {
+      handleLoadSyncConflicts(db, id);
+      return;
+    }
+
+    if (type === "resolveSyncConflict") {
+      handleResolveSyncConflict(db, id, payload);
       return;
     }
 
@@ -195,9 +206,9 @@ function handleLoadNote(db, id, payload) {
 function handleSaveNote(db, id, payload) {
   var note = payload || {};
   var now = new Date().toISOString();
-  var path = extractAndValidateText(note.path, 512);
-  var title = extractAndValidateText(note.title, 1024);
-  var body = extractAndValidateText(note.body, 50000, { allowEmpty: true });
+  var path = normalizeAndValidatePath(note.path);
+  var title = extractAndValidateText(note.title, SYNC_INPUT_LIMITS.title);
+  var body = extractAndValidateText(note.body, SYNC_INPUT_LIMITS.body, { allowEmpty: true });
   if (!path || !title || body == null) {
     postIfNotCancelled(id, { id: id, ok: false, error: "Invalid note payload" });
     return;
@@ -253,16 +264,36 @@ function handleSaveNote(db, id, payload) {
 function extractAndValidateText(value, maxLength, options) {
   const allowEmpty = Boolean(options && options.allowEmpty);
   if (typeof value !== "string") {
-    value = value == null ? "" : String(value);
-  }
-  const trimmed = value.trim();
-  if (!trimmed && !allowEmpty) {
     return null;
   }
-  if (trimmed.length > maxLength) {
+  if (!value && !allowEmpty) {
     return null;
   }
-  return trimmed;
+  if (value.length > maxLength) {
+    return null;
+  }
+  return value;
+}
+
+function normalizeAndValidatePath(value) {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const path = value.normalize("NFC");
+  const segments = path.split("/").slice(1);
+  const hasInvalidSegment = segments.some(function (segment) {
+    return segment === "" || segment === "." || segment === "..";
+  });
+  if (
+    !path.startsWith("/pages/") ||
+    path.endsWith("/") ||
+    hasInvalidSegment ||
+    /\p{Cc}/u.test(path) ||
+    path.length > SYNC_INPUT_LIMITS.path
+  ) {
+    return null;
+  }
+  return path;
 }
 
 function handleDeleteNote(db, id, payload) {
@@ -329,6 +360,10 @@ function handleLoadPendingSyncChanges(db, id) {
   postIfNotCancelled(id, { id: id, ok: true, result: readPendingSyncChanges(db) });
 }
 
+function handleLoadSyncConflicts(db, id) {
+  postIfNotCancelled(id, { id: id, ok: true, result: readSyncConflicts(db) });
+}
+
 function readPendingSyncChanges(db) {
   var changes = [];
   db.exec({
@@ -353,6 +388,248 @@ function readPendingSyncChanges(db) {
   return changes;
 }
 
+function readSyncConflicts(db) {
+  var conflicts = [];
+  db.exec({
+    sql:
+      "SELECT note_id, operation_id, base_version, local_json, server_json, created_at " +
+      "FROM sync_conflicts ORDER BY created_at ASC, note_id ASC",
+    rowMode: "object",
+    callback: function (row) {
+      if (!row || typeof row !== "object") return;
+      var local = parseJsonObject(row.local_json);
+      if (!local) return;
+      conflicts.push({
+        noteId: String(row.note_id || ""),
+        operationId: String(row.operation_id || ""),
+        baseVersion: Number(row.base_version || 0),
+        local: local,
+        server: parseJsonObject(row.server_json),
+        createdAt: String(row.created_at || ""),
+      });
+    },
+  });
+  return conflicts;
+}
+
+function parseJsonObject(value) {
+  if (typeof value !== "string") return null;
+  try {
+    var parsed = JSON.parse(value);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function recordSyncConflict(db, change, response) {
+  var server = normalizeConflictServer(response, change.noteId);
+  // Preserve edits made while the conflicting request was in flight.
+  change = readPendingSyncChanges(db).find(function (pending) {
+    return pending.noteId === change.noteId;
+  }) || change;
+  var conflict = {
+    noteId: change.noteId,
+    operationId: change.operationId,
+    baseVersion: change.baseVersion,
+    local: change,
+    server: server,
+    createdAt: new Date().toISOString(),
+  };
+  db.exec({ sql: "BEGIN" });
+  try {
+    db.exec({
+      sql:
+        "INSERT INTO sync_conflicts " +
+        "(note_id, operation_id, base_version, local_json, server_json, created_at, updated_at) " +
+        "VALUES ($note_id, $operation_id, $base_version, $local_json, $server_json, $created_at, $updated_at) " +
+        "ON CONFLICT(note_id) DO UPDATE SET operation_id = excluded.operation_id, " +
+        "base_version = excluded.base_version, local_json = excluded.local_json, " +
+        "server_json = excluded.server_json, updated_at = excluded.updated_at",
+      bind: {
+        $note_id: conflict.noteId,
+        $operation_id: conflict.operationId,
+        $base_version: conflict.baseVersion,
+        $local_json: JSON.stringify(conflict.local),
+        $server_json: server ? JSON.stringify(server) : null,
+        $created_at: conflict.createdAt,
+        $updated_at: conflict.createdAt,
+      },
+    });
+    db.exec({
+      sql: "DELETE FROM sync_outbox WHERE note_id = $note_id",
+      bind: { $note_id: change.noteId },
+    });
+    db.exec({ sql: "COMMIT" });
+    return conflict;
+  } catch (error) {
+    rollbackTransaction(db);
+    throw error;
+  }
+}
+
+function normalizeConflictServer(response, noteId) {
+  var note = response && typeof response === "object" ? response.note : null;
+  if (!note || typeof note !== "object" || note.noteId !== noteId) {
+    return null;
+  }
+  if (
+    !Number.isSafeInteger(note.version) ||
+    !Number.isSafeInteger(note.changeSequence) ||
+    typeof note.updatedAt !== "string" ||
+    typeof note.deleted !== "boolean"
+  ) {
+    return null;
+  }
+  return {
+    noteId: note.noteId,
+    version: note.version,
+    changeSequence: note.changeSequence,
+    deleted: note.deleted,
+    path: typeof note.path === "string" ? note.path : null,
+    title: typeof note.title === "string" ? note.title : null,
+    body: typeof note.body === "string" ? note.body : null,
+    updatedAt: note.updatedAt,
+  };
+}
+
+function handleResolveSyncConflict(db, id, payload) {
+  // Resolve after any in-flight sync has finished applying its response.
+  syncRequest = syncRequest.catch(() => undefined).then(function () {
+    resolveStoredSyncConflict(db, id, payload);
+  });
+  return syncRequest;
+}
+
+function resolveStoredSyncConflict(db, id, payload) {
+  // Queued resolutions must not change data after the caller has timed out.
+  if (consumeCancelledRequest(id)) return;
+  var noteId = payload && typeof payload.noteId === "string" ? payload.noteId : "";
+  var choice = payload && payload.choice;
+  var stored = findStoredSyncConflict(db, noteId);
+  var local = stored && parseJsonObject(stored.local_json);
+  var server = stored && parseJsonObject(stored.server_json);
+  if (!local || (choice !== "local" && choice !== "server")) {
+    postIfNotCancelled(id, { id: id, ok: false, error: "Invalid conflict resolution" });
+    return;
+  }
+  try {
+    db.exec({ sql: "BEGIN" });
+    db.exec({
+      sql: "DELETE FROM sync_outbox WHERE note_id = $note_id",
+      bind: { $note_id: noteId },
+    });
+    var path = choice === "server"
+      ? adoptConflictServer(db, local, server)
+      : keepConflictLocal(db, local, server, payload.path);
+    db.exec({
+      sql: "DELETE FROM sync_conflicts WHERE note_id = $note_id",
+      bind: { $note_id: noteId },
+    });
+    db.exec({ sql: "COMMIT" });
+    postIfNotCancelled(id, {
+      id: id, ok: true, result: { previousPath: local.path, path: path },
+    });
+  } catch (error) {
+    rollbackTransaction(db);
+    postIfNotCancelled(id, {
+      id: id,
+      ok: false,
+      error: error && error.message ? String(error.message) : "Failed to resolve Cloud Sync conflict",
+    });
+  }
+}
+
+function adoptConflictServer(db, local, server) {
+  if (!server) {
+    removeConflictLocalNote(db, local);
+    return null;
+  }
+  var error = applyRemoteChange(db, {
+    changeSequence: server.changeSequence,
+    noteId: server.noteId,
+    version: server.version,
+    kind: server.deleted ? "delete" : "upsert",
+    path: server.path,
+    title: server.title,
+    body: server.body,
+    deletedAt: server.deleted ? server.updatedAt : null,
+    updatedAt: server.updatedAt,
+  });
+  if (error) {
+    throw new Error("Cannot apply the server version: " + error.error);
+  }
+  return server.deleted ? null : server.path;
+}
+
+function keepConflictLocal(db, local, server, requestedPath) {
+  var path = requestedPath === undefined ? local.path : normalizeAndValidatePath(requestedPath);
+  if (!path || (!server && (path === local.path || local.deleted))) {
+    throw new Error("Choose a different valid page path to keep the local note");
+  }
+  var other = findSyncNoteByPath(db, path);
+  if ((other && other.noteId !== local.noteId) || (path !== local.path && findPageByPath(db, path))) {
+    throw new Error("The chosen path already belongs to another local note");
+  }
+  var now = new Date().toISOString();
+  if (path !== local.path) {
+    removeConflictLocalNote(db, local);
+  }
+  var operation = { ...local, path: path, operationId: createSyncNoteId(),
+    baseVersion: server ? server.version : local.baseVersion, createdAt: now };
+  writeConflictLocalPage(db, operation, now);
+  upsertSyncNote(db, {
+    path: path, noteId: local.noteId,
+    version: operation.baseVersion,
+    changeSequence: server ? server.changeSequence : 0,
+    deleted: local.deleted, updatedAt: now,
+  });
+  // The conflict row must be removed before enqueueing a resolved operation.
+  db.exec({ sql: "DELETE FROM sync_conflicts WHERE note_id = $note_id",
+    bind: { $note_id: local.noteId } });
+  enqueueSyncChange(db, operation);
+  return local.deleted ? null : path;
+}
+
+function writeConflictLocalPage(db, local, now) {
+  if (local.deleted) {
+    db.exec({ sql: "DELETE FROM pages WHERE path = $path", bind: { $path: local.path } });
+    db.exec({ sql: "DELETE FROM links WHERE source_path = $path", bind: { $path: local.path } });
+    return;
+  }
+  db.exec({
+    sql: "INSERT INTO pages (path, title, body, updated_at) VALUES ($path, $title, $body, $updated_at) " +
+      "ON CONFLICT(path) DO UPDATE SET title = excluded.title, body = excluded.body, updated_at = excluded.updated_at",
+    bind: { $path: local.path, $title: local.title, $body: local.body, $updated_at: now },
+  });
+  replaceLinksForSource(db, local.path, local.body);
+}
+
+function removeConflictLocalNote(db, local) {
+  var current = findSyncNoteById(db, local.noteId);
+  if (current) {
+    db.exec({ sql: "DELETE FROM pages WHERE path = $path", bind: { $path: current.path } });
+    db.exec({ sql: "DELETE FROM links WHERE source_path = $path", bind: { $path: current.path } });
+  }
+  db.exec({ sql: "DELETE FROM sync_notes WHERE note_id = $note_id", bind: { $note_id: local.noteId } });
+  db.exec({ sql: "DELETE FROM sync_deleted_notes WHERE note_id = $note_id", bind: { $note_id: local.noteId } });
+}
+
+function findStoredSyncConflict(db, noteId) {
+  var conflict = null;
+  db.exec({
+    sql:
+      "SELECT note_id, operation_id, base_version, local_json, server_json, created_at " +
+      "FROM sync_conflicts WHERE note_id = $note_id LIMIT 1",
+    rowMode: "object",
+    bind: { $note_id: noteId },
+    callback: function (row) {
+      if (row && typeof row === "object") conflict = row;
+    },
+  });
+  return conflict;
+}
+
 function handleSyncPendingChanges(db, id) {
   syncRequest = syncRequest
     .catch(() => undefined)
@@ -375,6 +652,16 @@ async function runSyncPendingChanges(db) {
 
   for (const change of pendingChanges) {
     const result = await sendPendingSyncChange(change);
+    if (result.status === "conflict") {
+      const conflict = recordSyncConflict(db, change, result.response);
+      return {
+        status: "conflict",
+        noteId: change.noteId,
+        conflict: conflict,
+        syncedChanges: syncedChanges,
+        receivedChanges: 0,
+      };
+    }
     if (result.status !== "synced") {
       return {
         ...result,
@@ -606,6 +893,33 @@ function applyRemoteChanges(db, changes, cursor) {
         };
       }
 
+      if (hasSyncConflict(db, change.noteId)) {
+        var storedConflict = findStoredSyncConflict(db, change.noteId);
+        var localConflict = parseJsonObject(storedConflict?.local_json);
+        var serverConflict = parseJsonObject(storedConflict?.server_json);
+        if (nextAfter !== cursor) {
+          writeSyncCursor(db, nextAfter);
+        }
+        db.exec({ sql: "COMMIT" });
+        if (localConflict) {
+          return {
+            status: "conflict",
+            noteId: change.noteId,
+            conflict: {
+              noteId: change.noteId,
+              operationId: String(storedConflict.operation_id || ""),
+              baseVersion: Number(storedConflict.base_version || 0),
+              local: localConflict,
+              server: serverConflict,
+              createdAt: String(storedConflict.created_at || ""),
+            },
+            nextAfter: nextAfter,
+            receivedChanges: receivedChanges,
+          };
+        }
+        throw new Error("Invalid stored Cloud Sync conflict");
+      }
+
       if (isAlreadyAppliedChange(db, change)) {
         nextAfter = change.changeSequence;
         continue;
@@ -654,6 +968,21 @@ function isRemoteChange(change, previousSequence) {
       typeof change.updatedAt === "string" &&
       (change.kind === "upsert" || change.kind === "delete"),
   );
+}
+
+function hasSyncConflict(db, noteId) {
+  var conflict = null;
+  db.exec({
+    sql: "SELECT note_id FROM sync_conflicts WHERE note_id = $note_id LIMIT 1",
+    rowMode: "object",
+    bind: { $note_id: noteId },
+    callback: function (row) {
+      if (row && typeof row === "object") {
+        conflict = row;
+      }
+    },
+  });
+  return Boolean(conflict);
 }
 
 function hasPendingSyncChange(db, noteId) {
@@ -918,6 +1247,15 @@ function upsertSyncNote(db, syncNote) {
 }
 
 function enqueueSyncChange(db, change) {
+  if (hasSyncConflict(db, change.noteId)) {
+    db.exec({
+      sql: "UPDATE sync_conflicts SET operation_id = $operation_id, base_version = $base_version, " +
+        "local_json = $local_json, updated_at = $updated_at WHERE note_id = $note_id",
+      bind: { $operation_id: change.operationId, $base_version: change.baseVersion,
+        $local_json: JSON.stringify(change), $updated_at: change.createdAt, $note_id: change.noteId },
+    });
+    return;
+  }
   db.exec({
     sql:
       "INSERT INTO sync_outbox " +
@@ -958,6 +1296,11 @@ function rollbackTransaction(db) {
 
 function handleBulkSaveNotes(db, id, payload) {
   const notes = Array.isArray(payload) ? payload : [];
+  const limitError = validateImportBatchLimits(notes);
+  if (limitError) {
+    postIfNotCancelled(id, { id: id, ok: false, error: limitError });
+    return;
+  }
   const nowForBulk = new Date().toISOString();
   db.exec({ sql: "BEGIN" });
   try {
@@ -994,11 +1337,30 @@ function handleBulkSaveNotes(db, id, payload) {
   }
 }
 
+function validateImportBatchLimits(notes) {
+  if (notes.length > 1000) {
+    return "Directory import file count limit exceeded";
+  }
+  var totalBodyLength = 0;
+  for (const note of notes) {
+    if (!note || typeof note !== "object") {
+      return "Invalid note payload";
+    }
+    if (typeof note.body === "string") {
+      totalBodyLength += note.body.length;
+    }
+  }
+  if (totalBodyLength > 20000000) {
+    return "Directory import total size limit exceeded";
+  }
+  return null;
+}
+
 function sanitizeNoteForImport(note, fallbackUpdatedAt, index) {
   const record = note || {};
-  const path = extractAndValidateText(record.path, 512);
-  const title = extractAndValidateText(record.title, 1024);
-  const body = extractAndValidateText(record.body, 50000, { allowEmpty: true });
+  const path = normalizeAndValidatePath(record.path);
+  const title = extractAndValidateText(record.title, SYNC_INPUT_LIMITS.title);
+  const body = extractAndValidateText(record.body, SYNC_INPUT_LIMITS.body, { allowEmpty: true });
   if (!path || !title || body == null) {
     // Include the index in the error so corrupted data is easy to identify during import.
     throw new Error(`Invalid note payload during import (index ${index})`);
@@ -1147,6 +1509,12 @@ function initializeSyncStructures(db) {
       "CREATE TABLE IF NOT EXISTS sync_deleted_notes (" +
       "note_id TEXT PRIMARY KEY, version INTEGER NOT NULL, " +
       "change_sequence INTEGER NOT NULL, deleted_at TEXT, updated_at TEXT NOT NULL)",
+  });
+  db.exec({
+    sql:
+      "CREATE TABLE IF NOT EXISTS sync_conflicts (" +
+      "note_id TEXT PRIMARY KEY, operation_id TEXT NOT NULL, base_version INTEGER NOT NULL, " +
+      "local_json TEXT NOT NULL, server_json TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)",
   });
   db.exec({
     sql:

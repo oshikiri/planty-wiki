@@ -1,3 +1,5 @@
+import { SYNC_INPUT_LIMITS } from "../../../src/types/sync";
+
 const UUID_V4_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const SAFE_INTEGER_PATTERN = /^(0|[1-9][0-9]*)$/;
 
@@ -51,7 +53,8 @@ function normalizeAndValidatePath(value: unknown): string | InvalidRequest {
     !path.startsWith("/pages/") ||
     path.endsWith("/") ||
     hasInvalidSegment ||
-    /\p{Cc}/u.test(path)
+    /\p{Cc}/u.test(path) ||
+    path.length > SYNC_INPUT_LIMITS.path
   ) {
     return invalidRequest("path");
   }
@@ -97,7 +100,10 @@ export function parseNoteMutation(
     payload.deleted !== false ||
     typeof payload.path !== "string" ||
     typeof payload.title !== "string" ||
-    typeof payload.body !== "string"
+    typeof payload.body !== "string" ||
+    payload.title.length === 0 ||
+    payload.title.length > SYNC_INPUT_LIMITS.title ||
+    payload.body.length > SYNC_INPUT_LIMITS.body
   ) {
     return invalidRequest("body");
   }

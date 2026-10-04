@@ -12,6 +12,7 @@ import { ClickableLinkPlugin } from "@lexical/react/LexicalClickableLinkPlugin";
 import { lexicalConfig } from "./editorConfig";
 import { BASIC_TRANSFORMERS } from "./markdownTransformers";
 
+import { EditorEditablePlugin } from "./plugins/EditorEditablePlugin";
 import { WikiLinkPlugin } from "./plugins/WikiLinkPlugin";
 import { CtrlKeyBindingsPlugin } from "./plugins/CtrlKeyBindingsPlugin";
 import { EditorPersistencePlugin } from "./plugins/EditorPersistencePlugin";
@@ -26,6 +27,7 @@ type PlantyEditorProps = {
   initialMarkdown: string;
   onMarkdownChange: (markdown: string) => void;
   onWikiLinkClick: (path: string) => void;
+  isReadOnly?: boolean;
 };
 
 /**
@@ -35,6 +37,7 @@ type PlantyEditorProps = {
  * @param props.initialMarkdown Initial Markdown body
  * @param props.onMarkdownChange Callback invoked when the editor content changes
  * @param props.onWikiLinkClick Handler triggered when a wiki link is clicked
+ * @param props.isReadOnly Whether editor input is temporarily disabled
  * @returns JSX container for the Lexical editor
  */
 export function PlantyEditor({
@@ -42,6 +45,7 @@ export function PlantyEditor({
   initialMarkdown,
   onMarkdownChange,
   onWikiLinkClick,
+  isReadOnly = false,
 }: PlantyEditorProps) {
   return (
     <LexicalComposer initialConfig={lexicalConfig}>
@@ -53,6 +57,7 @@ export function PlantyEditor({
           placeholder={<div class="lexical-editor-placeholder">Type your note here</div>}
           ErrorBoundary={LexicalErrorBoundary}
         />
+        <EditorEditablePlugin isReadOnly={isReadOnly} />
         <ListPlugin />
         <CheckListPlugin />
         {/* Keep default Lexical tab behavior for list and block indentation. */}

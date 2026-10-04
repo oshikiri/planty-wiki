@@ -1,3 +1,16 @@
+export const SYNC_INPUT_LIMITS = {
+  path: 512,
+  title: 1024,
+  body: 50_000,
+} as const;
+
+export const DIRECTORY_IMPORT_LIMITS = {
+  maxDepth: 20,
+  maxFiles: 1_000,
+  maxFileBytes: 1_000_000,
+  maxTotalBytes: 20_000_000,
+} as const;
+
 export type PendingSyncChange = {
   operationId: string;
   noteId: string;
@@ -6,6 +19,26 @@ export type PendingSyncChange = {
   body: string;
   deleted: boolean;
   baseVersion: number;
+  createdAt: string;
+};
+
+type SyncConflictNote = {
+  noteId: string;
+  version: number;
+  changeSequence: number;
+  deleted: boolean;
+  path: string | null;
+  title: string | null;
+  body: string | null;
+  updatedAt: string;
+};
+
+export type SyncConflict = {
+  noteId: string;
+  operationId: string;
+  baseVersion: number;
+  local: PendingSyncChange;
+  server: SyncConflictNote | null;
   createdAt: string;
 };
 
@@ -20,5 +53,9 @@ export type CloudSyncResult =
       syncedChanges: number;
       receivedChanges: number;
       noteId: string;
-      response: unknown;
+      conflict: SyncConflict;
     };
+
+export type SyncConflictResolution = { previousPath: string; path: string | null };
+
+export type NoteChangeEvent = { type: "sync" } | ({ type: "resolution" } & SyncConflictResolution);

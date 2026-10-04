@@ -146,6 +146,22 @@ it("異なる内容で同じ操作IDを再利用した場合に拒否する", as
   await expect(response.json()).resolves.toEqual({ error: "operation_id_reuse" });
 });
 
+it("入力上限を超えた更新を保存せずに拒否する", async () => {
+  const database = new FakeSyncDatabase();
+  const response = await putNote(database, {
+    path: "/pages/README",
+    title: "README",
+    body: "x".repeat(50_001),
+    deleted: false,
+    operationId: OPERATION_ID_1,
+    baseVersion: 0,
+  });
+
+  expect(response.status).toBe(400);
+  await expect(response.json()).resolves.toEqual({ error: "invalid_request", field: "body" });
+  expect(database.findChanges(0, 100)).toEqual([]);
+});
+
 it("認証を要求し、差分取得のクエリーパラメータを検証する", async () => {
   const database = new FakeSyncDatabase();
   const unauthorized = await onRequestGet(createChangesContext(database, "", false));

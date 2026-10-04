@@ -1,6 +1,11 @@
 import type { NoteStorage } from "./index";
 import type { Note, NoteSummary } from "../types/note";
-import type { CloudSyncResult, PendingSyncChange } from "../types/sync";
+import type {
+  CloudSyncResult,
+  PendingSyncChange,
+  SyncConflict,
+  SyncConflictResolution,
+} from "../types/sync";
 import { callWorker } from "./sqlite-worker-client";
 
 /**
@@ -75,6 +80,30 @@ export function createSqliteStorage(): NoteStorage {
         return (await callWorker<PendingSyncChange[]>("loadPendingSyncChanges")) ?? [];
       } catch (error) {
         console.error("Failed to load pending Cloud Sync changes.", error);
+        throw error;
+      }
+    },
+    async loadSyncConflicts(): Promise<SyncConflict[]> {
+      try {
+        return (await callWorker<SyncConflict[]>("loadSyncConflicts")) ?? [];
+      } catch (error) {
+        console.error("Failed to load Cloud Sync conflicts.", error);
+        throw error;
+      }
+    },
+    async resolveSyncConflict(
+      noteId: string,
+      choice: "local" | "server",
+      path?: string,
+    ): Promise<SyncConflictResolution> {
+      try {
+        return await callWorker<SyncConflictResolution>("resolveSyncConflict", {
+          noteId,
+          choice,
+          path,
+        });
+      } catch (error) {
+        console.error("Failed to resolve Cloud Sync conflict.", error);
         throw error;
       }
     },

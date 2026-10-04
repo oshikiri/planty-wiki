@@ -51,6 +51,15 @@ console.log(message);
 - Notes that link to the current page (backlinks) are grouped in the Backlinks list at the bottom of the editor.
 
 
+## Cloud Sync Conflicts
+
+- Choose `Keep local` to keep the latest saved local version, or `Use server` to replace it with the server version.
+- Resolution becomes available after local changes finish saving. Editing pauses while the chosen version is loaded.
+- For a path conflict, enter another path, such as `/pages/project-local`, and choose `Save at new path`.
+- Existing wiki links keep their original target. For example, change `[[project]]` to `[[project-local]]` to link to a renamed local note.
+- Choose `Discard local` and confirm to remove the conflicting local note.
+- During Markdown import, `Cancel Import` stops file reading before notes are saved. Once `Saving Import...` appears, saving runs to completion.
+
 ## Unsupported Syntax
 
 - The image embed syntax (`![alt text](url "title")`) is shown as plain text and does not render.
