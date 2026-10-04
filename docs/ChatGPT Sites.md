@@ -1,48 +1,30 @@
-# ChatGPT Sitesの仕様
+# ChatGPT Sitesの実行環境
 
-## 位置づけ
+planty-wikiはChatGPT Sitesで配信する。Cloud Syncの設計は [[Cloud Sync]]、同期APIの契約は [[Cloud Sync API]] に記載する。
 
-この文書は、ChatGPT Sitesをplanty-wikiのホスティングとCloud Syncの基盤として検討するための前提資料である。ここではSitesの公式仕様を整理し、planty-wiki固有の設計判断は [[Cloud Sync]]、同期APIの契約は [[Cloud Sync API]] に記載する。
+## ホスティングとアクセス制御
 
-確認日: 2026-09-20
-
-## ホスティングと公開
-
-- Sitesは公開ベータ版である。利用できるプランと利用上限は、契約プランによって異なる。
-- 新しいSiteには所有者とワークスペース管理者がアクセスできる。設定によって、選択した利用者、招待した閲覧者、ワークスペース全体、インターネット全体へ対象を広げられる。
-- Siteのアクセス設定と、Site内に実装するサインイン機能は別の制御である。
+- フロントエンドと同期APIを同じSiteから配信する。
+- Siteへのアクセス可否は、Siteのアクセス設定で制御する。
+- Siteのアクセス設定と、Site内で使うサインイン機能は別の制御である。
+- Siteの利用上限や利用可能な機能は、契約プランと管理画面の設定に従う。
 
 ## 認証
 
-- サインインとサインアウトには、Sitesが提供する次のパスを使用する。
+サインインとサインアウトには、Sitesが提供するパスを使う。
 
 ```html
 <a href="/signin-with-chatgpt">Sign in with ChatGPT</a>
 <a href="/signout-with-chatgpt">Sign out</a>
 ```
 
-- サインイン後、Sitesはサーバーへのリクエストに次のヘッダーを付与する。
-    - `oai-authenticated-user-email`: 認証済みメールアドレス
-- 認証ヘッダーの具体的な到達方法と、Siteのアクセス設定が同期APIへ適用される範囲は、実サイトで確認する。
+認証済みリクエストには、Sitesが `oai-authenticated-user-email` ヘッダーを付与する。同期APIはこのヘッダーで認証状態を確認し、アプリケーションは利用者をメールアドレスで分離しない。
 
-## 永続ストレージ
+## 永続ストレージとブラウザー機能
 
-- D1は、構造化された永続データを保存するSQLite互換データベースである。
-- SiteにはD1のバインディングを設定できる。
-- D1のストレージ上限は1 Siteあたり10 GBである。
+- 同期データはSiteに割り当てたD1データベースへ保存する。
+- D1はSQLite互換のデータベースであり、Siteの設定でバインディングを指定する。
+- ローカル保存にはOPFS、ストレージ処理と同期処理にはWorkerを使う。
+- アプリはSharedArrayBufferとCross-Origin Isolationを必要とする。
 
-## 実行環境
-
-- 現行アプリが必要とするOPFS、Worker、SharedArrayBuffer、Cross-Origin Isolationは、Sites上で個別に動作確認する必要がある。
-- サーバーAPIのルーティング方式とD1への具体的なアクセス方法は、Sites上で保存した検証用バージョンを使って確認する。
-
-## 制約と運用上の前提
-
-- Sitesは、提供開始時点でデータレジデンシーに対応していない。
-- 利用上限に達すると、Siteの作成、ストレージ追加、公開継続などが制限される場合がある。
-- Sitesの仕様変更やアカウントごとの利用可否は、実際の管理画面で確認する。
-
-## 公式資料
-
-- [Sites – ChatGPT](https://learn.chatgpt.com/docs/sites)
-- [内部アプリの構築とデプロイ](https://developers.openai.com/ja-JP/use-cases/build-and-deploy-internal-apps)
+利用可能な機能、容量、データレジデンシーなどの最新情報は、[Sitesの公式資料](https://learn.chatgpt.com/docs/sites) と[内部アプリの構築とデプロイ](https://developers.openai.com/ja-JP/use-cases/build-and-deploy-internal-apps)を参照する。
