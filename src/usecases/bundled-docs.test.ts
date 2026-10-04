@@ -22,7 +22,7 @@ function createDependencies() {
   };
 }
 
-it("preserves saved documentation edits during boot with and without a note route", async () => {
+it("起動時にノートのルート指定の有無にかかわらず保存済みドキュメントの編集内容を保持する", async () => {
   const dependencies = createDependencies();
   for (const route of [null, { kind: "note" as const, path: savedNote.path }]) {
     const result = await bootstrapNotes({
@@ -35,14 +35,14 @@ it("preserves saved documentation edits during boot with and without a note rout
   expect(dependencies.noteStorage.saveNote).not.toHaveBeenCalled();
 });
 
-it("preserves saved documentation edits when selecting an existing page", async () => {
+it("既存ページを選択した場合に保存済みドキュメントの編集内容を保持する", async () => {
   const dependencies = createDependencies();
   const result = await selectOrCreateNote({ ...dependencies, path: savedNote.path });
   expect(result.note).toEqual(savedNote);
   expect(dependencies.noteStorage.saveNote).not.toHaveBeenCalled();
 });
 
-it("creates a missing documentation page from its bundled body when explicitly opened", async () => {
+it("未作成のドキュメントページを明示的に開いた場合に同梱の本文から作成する", async () => {
   const dependencies = createDependencies();
   vi.mocked(dependencies.noteStorage.loadNote).mockResolvedValue(null);
   const result = await selectOrCreateNote({ ...dependencies, path: savedNote.path });

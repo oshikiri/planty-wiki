@@ -70,7 +70,7 @@ async function mountUpdates(path = "/pages/test") {
   };
 }
 
-it("replaces the current draft and editor revision after adopting the server version", async () => {
+it("サーバー側の内容を採用した後に現在の下書きとエディタのリビジョンを更新する", async () => {
   const f = await mountUpdates();
   await act(async () => {
     await f.emit({ type: "resolution", previousPath: "/pages/test", path: "/pages/test" });
@@ -78,7 +78,7 @@ it("replaces the current draft and editor revision after adopting the server ver
   expect(f.container.textContent).toBe("/pages/test|Server|Server|1");
 });
 
-it("navigates to the path chosen when resolving a conflicting local note", async () => {
+it("ローカルノートの競合解決時に選んだパスへ移動する", async () => {
   const f = await mountUpdates();
   f.loadNote.mockResolvedValue({ path: "/pages/renamed", title: "Test", body: "Renamed" });
   await act(async () => {
@@ -88,7 +88,7 @@ it("navigates to the path chosen when resolving a conflicting local note", async
   expect(f.container.textContent).toBe("/pages/renamed|Renamed|Renamed|1");
 });
 
-it("defers received updates while unsaved editor changes are present", async () => {
+it("エディタに未保存の変更がある間は受信した更新の反映を保留する", async () => {
   const f = await mountUpdates();
   await act(() => f.setPending(true));
   await act(async () => {
@@ -105,7 +105,7 @@ it("defers received updates while unsaved editor changes are present", async () 
   expect(f.container.textContent).toBe("/pages/test|Server|Server|1");
 });
 
-it("shows synchronized edits to a bundled page instead of its bundled body", async () => {
+it("同梱ページに同期された編集内容を表示する", async () => {
   const f = await mountUpdates("/pages/README");
   await act(async () => {
     await f.emit({ type: "resolution", previousPath: "/pages/README", path: "/pages/README" });

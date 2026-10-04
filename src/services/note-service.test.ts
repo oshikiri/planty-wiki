@@ -9,7 +9,7 @@ import { DEFAULT_README_MARKDOWN } from "../defaults/initial-docs";
 
 describe("NoteService", () => {
   describe("#loadNoteSummaries", () => {
-    it("loads summaries after the initial sync completes", async () => {
+    it("初回の同期が完了してからノートの概要を読み込む", async () => {
       const repository = createInMemoryRepository([]);
       repository.syncPendingChanges = async () => {
         await repository.save({
@@ -33,7 +33,7 @@ describe("NoteService", () => {
   });
 
   describe("#saveNote", () => {
-    it("persists the note so other accessors can read it", async () => {
+    it("保存したノートを他の取得メソッドで読み込める", async () => {
       const service = createInMemoryNoteService();
       const note: Note = {
         path: "/pages/test",
@@ -51,7 +51,7 @@ describe("NoteService", () => {
   });
 
   describe("#listBacklinks", () => {
-    it("returns notes whose bodies reference the target", async () => {
+    it("本文で対象を参照しているノートを返す", async () => {
       const targetPath = "/pages/target";
       const source: Note = {
         path: "/pages/source",
@@ -133,7 +133,7 @@ function createInMemoryRepository(initialNotes: Note[]): NoteRepository {
   };
 }
 
-it("waits for the resolved version to reach the UI before completing resolution", async () => {
+it("競合解決後の内容がUIに反映されるまで解決処理の完了を待つ", async () => {
   const repository = createInMemoryRepository([]);
   const service = createNoteService(repository);
   const events: string[] = [];
@@ -153,7 +153,7 @@ it("waits for the resolved version to reach the UI before completing resolution"
   expect(events).toEqual(["resolution", "complete"]);
 });
 
-it("refreshes bundled pages once before concurrent reads and sync", async () => {
+it("並行して実行する読み込みや同期の前に同梱ページを一度だけ更新する", async () => {
   const repository = createInMemoryRepository([]);
   const events: string[] = [];
   const refresh = vi.spyOn(repository, "refreshBundledDocs").mockImplementation(async () => {
@@ -192,7 +192,7 @@ it("refreshes bundled pages once before concurrent reads and sync", async () => 
   });
 });
 
-it("retries a failed bundled refresh before allowing a read", async () => {
+it("同梱ページの更新に失敗した場合は読み込みの前に更新を再試行する", async () => {
   const repository = createInMemoryRepository([]);
   const refresh = vi
     .spyOn(repository, "refreshBundledDocs")

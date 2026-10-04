@@ -100,7 +100,7 @@ function createWorker() {
   return { worker, sqlite, db, save, pending, server, conflict, resolve, messages, pages };
 }
 
-it("keeps edits made after a conflict and rebases them onto the server version", async () => {
+it("競合後の編集内容を保持し、サーバー側の版を基準に更新する", async () => {
   const f = createWorker();
   f.conflict();
   f.save("Latest local");
@@ -114,14 +114,14 @@ it("keeps edits made after a conflict and rebases them onto the server version",
   expect(f.pages()).toEqual([{ path: "/pages/test", body: "Latest local" }]);
   expect(f.worker.readSyncConflicts(f.db)).toEqual([]);
 });
-it("preserves an edit made while a conflicting network response is in flight", () => {
+it("競合を示すネットワーク応答を待つ間に行った編集を保持する", () => {
   const f = createWorker();
   f.save("Edit during request");
   f.conflict();
   expect(f.worker.readSyncConflicts(f.db)[0].local.body).toBe("Edit during request");
   expect(f.worker.readPendingSyncChanges(f.db)).toEqual([]);
 });
-it("adopts the server version without retaining later local operations", async () => {
+it("競合後のローカル操作を破棄してサーバー側の内容を採用する", async () => {
   const f = createWorker();
   f.conflict();
   f.save("Latest local");
@@ -130,7 +130,7 @@ it("adopts the server version without retaining later local operations", async (
   expect(f.worker.readPendingSyncChanges(f.db)).toEqual([]);
   expect(f.worker.readSyncConflicts(f.db)).toEqual([]);
 });
-it("preserves a conflict when the server path is occupied locally", async () => {
+it("サーバー側のパスがローカルで使用済みの場合に競合を保持する", async () => {
   const f = createWorker();
   f.save("Other", "/pages/other");
   f.conflict({ ...f.server, path: "/pages/other" });
@@ -142,7 +142,7 @@ it("preserves a conflict when the server path is occupied locally", async () => 
     { path: "/pages/test", body: "Initial local" },
   ]);
 });
-it("commits unrelated changes received before an unresolved conflict", () => {
+it("未解決の競合より前に受信した無関係な変更を確定する", () => {
   const f = createWorker();
   f.conflict();
   const result = f.worker.applyRemoteChanges(
@@ -164,7 +164,7 @@ it("commits unrelated changes received before an unresolved conflict", () => {
   expect(f.worker.readSyncCursor(f.db)).toBe(1);
   expect(f.pages()).toContainEqual({ path: "/pages/unrelated", body: "Server" });
 });
-it("allows a path conflict to be resolved by saving the latest version at a new path", async () => {
+it("最新の内容を新しいパスに保存してパスの競合を解決できる", async () => {
   const f = createWorker();
   f.worker.recordSyncConflict(f.db, f.pending, { error: "path_conflict" });
   f.save("Latest local");
@@ -177,7 +177,7 @@ it("allows a path conflict to be resolved by saving the latest version at a new 
     body: "Latest local",
   });
 });
-it("does not discard a conflict when the replacement path is invalid or occupied", async () => {
+it("変更先のパスが無効または使用済みの場合に競合を破棄しない", async () => {
   const f = createWorker();
   f.save("Other", "/pages/other");
   f.worker.recordSyncConflict(f.db, f.pending, { error: "path_conflict" });
@@ -187,7 +187,7 @@ it("does not discard a conflict when the replacement path is invalid or occupied
     expect(f.worker.readSyncConflicts(f.db)).toHaveLength(1);
   }
 });
-it("can discard an unsyncable local note without deleting other local notes", async () => {
+it("他のローカルノートを削除せずに同期できないローカルノートを破棄できる", async () => {
   const f = createWorker();
   f.save("Other", "/pages/other");
   f.worker.recordSyncConflict(f.db, f.pending, { error: "path_conflict" });
@@ -196,7 +196,7 @@ it("can discard an unsyncable local note without deleting other local notes", as
   expect(f.worker.readSyncConflicts(f.db)).toEqual([]);
   expect(f.worker.readPendingSyncChanges(f.db)).toHaveLength(1);
 });
-it("keeps a local deletion made after the conflict", async () => {
+it("競合後にローカルで行った削除を保持する", async () => {
   const f = createWorker();
   f.conflict();
   f.worker.handleDeleteNote(f.db, 3, { path: f.pending.path });
@@ -208,7 +208,7 @@ it("keeps a local deletion made after the conflict", async () => {
   });
 });
 
-it("does not apply a queued resolution after its caller cancels the request", async () => {
+it("呼び出し元が要求をキャンセルした場合に待機中の競合解決を適用しない", async () => {
   const f = createWorker();
   f.conflict();
   const resolution = f.resolve("server");
@@ -222,7 +222,7 @@ function bundledDoc(body: string, path = "/pages/test"): BundledDoc {
   return { path, body, hash: createHash("sha256").update(body).digest("hex") };
 }
 
-it("preserves user edits across launches when the bundled source is unchanged", () => {
+it("同梱の元データに変更がない場合は再起動後もユーザーの編集を保持する", () => {
   const f = createWorker();
   const doc = bundledDoc("Bundled");
   f.worker.handleRefreshBundledDocs(f.db, 4, [doc]);
@@ -236,7 +236,7 @@ it("preserves user edits across launches when the bundled source is unchanged", 
   expect(f.sqlite.prepare("SELECT updated_at FROM pages").get()).toEqual(timestamp);
 });
 
-it("replaces edited pages and their backlinks and sync payload only when their source changes", () => {
+it("同梱の元データが変わった場合にだけ編集済みページとバックリンクと同期データを置き換える", () => {
   const f = createWorker();
   const first = bundledDoc("First [[old]]");
   const other = bundledDoc("Other", "/pages/other");
@@ -266,7 +266,7 @@ it("replaces edited pages and their backlinks and sync payload only when their s
   ).toEqual({ hash: next.hash });
 });
 
-it("records unseen pages without creating them and preserves edits after their first creation", () => {
+it("未作成ページの元データを記録し、初回作成後の編集を保持する", () => {
   const f = createWorker();
   const doc = bundledDoc("Bundled", "/pages/new");
   f.worker.handleRefreshBundledDocs(f.db, 4, [doc]);
@@ -277,7 +277,7 @@ it("records unseen pages without creating them and preserves edits after their f
   expect(f.pages()).toContainEqual({ path: doc.path, body: "My edits" });
 });
 
-it("applies the current bundled body once to existing pages without a hash", () => {
+it("ハッシュがない既存ページに現在の同梱の本文を一度だけ適用する", () => {
   const f = createWorker();
   const doc = bundledDoc("Current repo [[current]]");
   f.save("Old body [[old]]");
@@ -304,7 +304,7 @@ it("applies the current bundled body once to existing pages without a hash", () 
 it.each([
   false,
   true,
-])("rolls back note, backlinks, pending sync and hashes together and permits a retry (recorded hash: %s)", (recorded) => {
+])("ノートとバックリンクと未送信の変更とハッシュをまとめてロールバックし、再試行できる（ハッシュ記録済み: %s）", (recorded) => {
   const f = createWorker();
   const first = bundledDoc("First [[old]]");
   f.save(first.body);
@@ -332,7 +332,7 @@ it.each([
   expect(f.pages()).toEqual([{ path: first.path, body: next.body }]);
 });
 
-it("does not restore deleted pages or delete pages removed from the bundle", () => {
+it("削除済みページを復元せず、同梱対象から外れたページも削除しない", () => {
   const f = createWorker();
   const first = bundledDoc("First");
   const other = bundledDoc("Other", "/pages/other");

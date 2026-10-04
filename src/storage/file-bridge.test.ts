@@ -6,7 +6,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-it("does not replace stored notes when cancelled during the last file read", async () => {
+it("最後のファイルの読み込み中にキャンセルされた場合は保存済みノートを置き換えない", async () => {
   const controller = new AbortController();
   const text = vi.fn(async () => {
     controller.abort();
@@ -28,7 +28,7 @@ it("does not replace stored notes when cancelled during the last file read", asy
   expect(importBatch).not.toHaveBeenCalled();
 });
 
-it("does not start saving after cancellation during directory enumeration", async () => {
+it("ディレクトリ内の項目の列挙中にキャンセルされた場合は保存を開始しない", async () => {
   const controller = new AbortController();
   const root = {
     async *entries() {

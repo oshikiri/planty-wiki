@@ -15,14 +15,14 @@ function createContext(
 }
 
 describe("GET /api/sync/probe", () => {
-  it("rejects requests without the Site authentication header", async () => {
+  it("Siteの認証ヘッダーがないリクエストを拒否する", async () => {
     const response = await onRequestGet(createContext());
 
     expect(response.status).toBe(401);
     await expect(response.json()).resolves.toEqual({ error: "unauthorized" });
   });
 
-  it("checks D1 after authentication and returns the readiness contract", async () => {
+  it("認証後にD1を確認し、利用可能な状態を返す", async () => {
     const response = await onRequestGet(
       createContext({ "oai-authenticated-user-email": "member@example.com" }),
     );
@@ -32,7 +32,7 @@ describe("GET /api/sync/probe", () => {
     await expect(response.json()).resolves.toEqual({ ready: true });
   });
 
-  it("returns a storage error when D1 is not bound", async () => {
+  it("D1がバインドされていない場合にストレージエラーを返す", async () => {
     const response = await onRequestGet(
       createContext({ "oai-authenticated-user-email": "member@example.com" }, null),
     );
@@ -41,7 +41,7 @@ describe("GET /api/sync/probe", () => {
     await expect(response.json()).resolves.toEqual({ error: "storage_unavailable" });
   });
 
-  it("does not expose D1 failures", async () => {
+  it("D1のエラーの詳細を公開しない", async () => {
     const response = await onRequestGet(
       createContext(
         { "oai-authenticated-user-email": "member@example.com" },

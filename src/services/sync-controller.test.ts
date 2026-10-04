@@ -13,7 +13,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-it("resumes periodic sync after another tab restores authentication", async () => {
+it("別のタブで認証が復旧した後に定期同期を再開する", async () => {
   const synchronize = vi
     .fn<() => Promise<CloudSyncResult>>()
     .mockResolvedValueOnce({ ...idle, status: "unauthenticated" })
@@ -33,7 +33,7 @@ it("resumes periodic sync after another tab restores authentication", async () =
   expect(synchronize).toHaveBeenCalledTimes(3);
 });
 
-it("does not send pending changes until the authentication probe succeeds", async () => {
+it("認証確認が成功するまで未送信の変更を送信しない", async () => {
   const synchronize = vi
     .fn<() => Promise<CloudSyncResult>>()
     .mockResolvedValue({ ...idle, status: "unauthenticated" });
@@ -47,7 +47,7 @@ it("does not send pending changes until the authentication probe succeeds", asyn
   expect(probe).toHaveBeenCalledTimes(2);
 });
 
-it("coalesces concurrent synchronization triggers", async () => {
+it("同時に発生した同期要求を一つにまとめる", async () => {
   let complete!: (result: CloudSyncResult) => void;
   const synchronize = vi.fn(
     () =>
@@ -64,7 +64,7 @@ it("coalesces concurrent synchronization triggers", async () => {
   await expect(second).resolves.toEqual(idle);
 });
 
-it("publishes syncing, retrying, and synced activity states", async () => {
+it("同期中、再試行中、同期済みの状態を通知する", async () => {
   let complete!: (result: CloudSyncResult) => void;
   const synchronize = vi.fn(
     () =>
@@ -88,7 +88,7 @@ it("publishes syncing, retrying, and synced activity states", async () => {
   expect(statuses).toEqual(["retrying", "syncing", "synced"]);
 });
 
-it("retries with exponential backoff without periodic sync bypassing the delay", async () => {
+it("定期同期でも待機時間を守りながら指数バックオフで再試行する", async () => {
   const synchronize = vi
     .fn<() => Promise<CloudSyncResult>>()
     .mockResolvedValue({ ...idle, status: "unavailable" });
