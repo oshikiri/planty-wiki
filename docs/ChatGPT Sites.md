@@ -31,10 +31,6 @@
 - SiteにはD1のバインディングを設定できる。
 - D1のストレージ上限は1 Siteあたり10 GBである。
 
-## planty-wiki Phase 2での検証対象
-
-Phase 2では、リポジトリの `functions/api/sync/probe.ts` と `public/probe.html` を使って、認証付き D1 接続、同一オリジン API、OPFS、Worker、SharedArrayBuffer、Cross-Origin Isolation を確認する。具体的な手順と記録形式は [[Cloud Sync Phase 2]] に記載する。
-
 ## 実行環境
 
 - 現行アプリが必要とするOPFS、Worker、SharedArrayBuffer、Cross-Origin Isolationは、Sites上で個別に動作確認する必要がある。

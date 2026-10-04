@@ -2,28 +2,25 @@
 
 ## 位置づけ
 
-この文書は、Cloud Syncの同期API契約とD1モデルを定義する。製品としての要求と同期方針は [[Cloud Sync]]、実装範囲と完了条件は [[planty-wiki scope]] に記載する。ChatGPT Sitesが提供する認証と実行環境の仕様は [[ChatGPT Sites]] に記載する。
+この文書は、Cloud Syncの同期API契約とD1モデルを定義する。製品としての要求と同期方針は [[Cloud Sync]]、今後の対応範囲は [[planty-wiki scope]] に記載する。ChatGPT Sitesが提供する認証と実行環境の仕様は [[ChatGPT Sites]] に記載する。
 
 - APIはフロントエンドと同じSiteの `/api/sync/` 配下に置く。
-- Phase 2では、認証とD1接続を確認する `probe` だけを配置する。
-- Phase 3では、ノート操作、差分同期、同期用D1スキーマを配置する。
+- `GET /api/sync/probe` は認証とD1接続を確認する。
 - 実装は `functions/api/sync/` と `functions/api/sync/schema.sql` に置く。
-- Phase 2の実サイト検証手順は [[Cloud Sync Phase 2]] に記載する。
-- Phase 3の実サイト検証手順は [[Cloud Sync Phase 3]] に記載する。
 
 ## エンドポイント
 
-| Phase | メソッドとパス | 用途 |
+| メソッドとパス | 用途 |
 | --- | --- | --- |
-| Phase 2 | `GET /api/sync/probe` | 認証とD1接続を確認する。 |
-| Phase 3 | `PUT /api/sync/notes/:noteId` | ノートを版番号付きで保存または削除する。 |
-| Phase 3 | `GET /api/sync/changes?after=<changeSequence>&limit=<limit>` | 指定した変更連番より後の変更を昇順で取得する。 |
+| `GET /api/sync/probe` | 認証とD1接続を確認する。 |
+| `PUT /api/sync/notes/:noteId` | ノートを版番号付きで保存または削除する。 |
+| `GET /api/sync/changes?after=<changeSequence>&limit=<limit>` | 指定した変更連番より後の変更を昇順で取得する。 |
 
 すべてのエンドポイントで認証を必須とする。未認証またはSitesの認証状態を確認できない場合は、`401 Unauthorized` を返す。
 
 Siteのアクセス設定を認可境界とし、アプリケーションは認証済み利用者をメールアドレスで区別しない。クライアントから受け取った利用者識別情報を認証判断に使わない。
 
-## Phase 2のAPI
+## 接続確認API
 
 `GET /api/sync/probe` は認証確認後にD1で `SELECT 1` を実行する。成功時は次の形式を返し、ノート本文などの利用者データを返さない。
 
@@ -33,7 +30,7 @@ Siteのアクセス設定を認可境界とし、アプリケーションは認�
 }
 ```
 
-## Phase 3のノートAPI
+## ノートAPI
 
 ### 更新
 
@@ -104,7 +101,7 @@ Siteのアクセス設定を認可境界とし、アプリケーションは認�
 
 同じ `operationId` でノートID、`baseVersion`、削除状態、パス、タイトル、本文のいずれかが異なる場合は、状態を変更せず `409 Conflict` とし、`error` に `operation_id_reuse` を設定する。
 
-## Phase 3の差分取得API
+## 差分取得API
 
 `GET /api/sync/changes` の `after` は指定した変更連番を含まない。省略時は `0` とし、初回同期ではすべての変更を対象とする。`limit` は省略時に `100` とし、`1` 以上 `100` 以下に制限する。
 
@@ -167,9 +164,9 @@ Siteのアクセス設定を認可境界とし、アプリケーションは認�
 }
 ```
 
-## Phase 3のD1モデル
+## D1モデル
 
-D1はSiteのアクセス設定で許可された利用者が共有するデータベースとして扱い、利用者識別用の列を持たせない。認証済みのPhase 3 APIへの最初のリクエストで、必要な3テーブルを `CREATE TABLE IF NOT EXISTS` により自動作成する。
+D1はSiteのアクセス設定で許可された利用者が共有するデータベースとして扱い、利用者識別用の列を持たせない。認証済みAPIへの最初のリクエストで、必要な3テーブルを `CREATE TABLE IF NOT EXISTS` により自動作成する。
 
 ```sql
 CREATE TABLE notes (
@@ -208,6 +205,6 @@ CREATE TABLE changes (
 ```
 
 
-## Phase 6での入力上限
+## 入力上限
 
 APIは更新を保存する前に、パス512文字、タイトル1024文字、本文50000文字の上限を検証する。上限を超えた場合は`400 Bad Request`を返し、ノート、変更ログ、操作記録を作成しない。
