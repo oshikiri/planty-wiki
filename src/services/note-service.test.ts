@@ -1,8 +1,11 @@
-import { describe, expect, it } from "vitest";
+// @vitest-environment node
+import { createHash } from "node:crypto";
+import { describe, expect, it, vi } from "vitest";
 
 import { createNoteService, type NoteService } from "./note-service";
 import type { Note } from "../types/note";
 import type { NoteRepository } from "../domain/note-repository";
+import { DEFAULT_README_MARKDOWN } from "../defaults/initial-docs";
 
 describe("NoteService", () => {
   describe("#loadNoteSummaries", () => {
@@ -82,6 +85,7 @@ function createInMemoryNoteService(initialNotes: Note[] = []): NoteService {
 function createInMemoryRepository(initialNotes: Note[]): NoteRepository {
   let notes = [...initialNotes];
   return {
+    async refreshBundledDocs() {},
     async loadSummaries() {
       return notes.map((note) => ({
         path: note.path,
@@ -143,9 +147,60 @@ it("waits for the resolved version to reach the UI before completing resolution"
   const resolution = service
     .resolveSyncConflict("note-id", "server")
     .then(() => events.push("complete"));
-  await Promise.resolve();
-  expect(events).toEqual(["resolution"]);
+  await vi.waitFor(() => expect(events).toEqual(["resolution"]));
   complete();
   await resolution;
   expect(events).toEqual(["resolution", "complete"]);
+});
+
+it("refreshes bundled pages once before concurrent reads and sync", async () => {
+  const repository = createInMemoryRepository([]);
+  const events: string[] = [];
+  const refresh = vi.spyOn(repository, "refreshBundledDocs").mockImplementation(async () => {
+    await Promise.resolve();
+    events.push("refresh");
+  });
+  repository.loadByPath = async () => {
+    expect(events).toContain("refresh");
+    return null;
+  };
+  repository.loadPendingSyncChanges = async () => {
+    expect(events).toContain("refresh");
+    return [];
+  };
+  repository.loadSyncConflicts = async () => {
+    expect(events).toContain("refresh");
+    return [];
+  };
+  repository.syncPendingChanges = async () => {
+    expect(events).toContain("refresh");
+    return { status: "idle", syncedChanges: 0, receivedChanges: 0 };
+  };
+  const service = createNoteService(repository);
+  await Promise.all([
+    service.loadNote("/pages/README"),
+    service.loadNoteSummaries(),
+    service.syncPendingChanges(),
+    service.loadPendingSyncChanges(),
+    service.loadSyncConflicts(),
+  ]);
+  expect(refresh).toHaveBeenCalledTimes(1);
+  expect(refresh.mock.calls[0][0]).toContainEqual({
+    path: "/pages/README",
+    body: DEFAULT_README_MARKDOWN,
+    hash: createHash("sha256").update(DEFAULT_README_MARKDOWN).digest("hex"),
+  });
+});
+
+it("retries a failed bundled refresh before allowing a read", async () => {
+  const repository = createInMemoryRepository([]);
+  const refresh = vi
+    .spyOn(repository, "refreshBundledDocs")
+    .mockRejectedValueOnce(new Error("Storage failure"));
+  const load = vi.spyOn(repository, "loadByPath");
+  const service = createNoteService(repository);
+  await expect(service.loadNote("/pages/README")).rejects.toThrow("Storage failure");
+  expect(load).not.toHaveBeenCalled();
+  await expect(service.loadNote("/pages/README")).resolves.toBeNull();
+  expect(refresh).toHaveBeenCalledTimes(2);
 });

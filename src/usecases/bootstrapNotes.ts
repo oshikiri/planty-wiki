@@ -63,10 +63,7 @@ export async function bootstrapNotes({
         signal,
       });
       storageUpdated = storageUpdated || ensured.storageUpdated;
-      const resolvedNote = applyBundledDocBody(
-        await noteStorage.loadNote(routeFromHash.path),
-        resolveBundledDocBody,
-      );
+      const resolvedNote = await noteStorage.loadNote(routeFromHash.path);
       return {
         route: routeFromHash,
         shouldNavigate: false,
@@ -77,10 +74,7 @@ export async function bootstrapNotes({
     }
     if (summaries[0]) {
       const route: AppRoute = { kind: "note", path: summaries[0].path };
-      const initialNote = applyBundledDocBody(
-        await noteStorage.loadNote(route.path),
-        resolveBundledDocBody,
-      );
+      const initialNote = await noteStorage.loadNote(route.path);
       return {
         route,
         shouldNavigate: true,
@@ -222,21 +216,4 @@ function createAbortedResult(defaultPage: string): BootstrapNotesResult {
     initialNote: null,
     storageUpdated: false,
   };
-}
-
-function applyBundledDocBody(
-  note: Note | null,
-  resolveBundledDocBody?: (path: string) => string | null,
-): Note | null {
-  if (!note || !resolveBundledDocBody) {
-    return note;
-  }
-  const bundledBody = resolveBundledDocBody(note.path);
-  if (bundledBody === null) {
-    return note;
-  }
-  if (note.body === bundledBody) {
-    return note;
-  }
-  return { ...note, body: bundledBody };
 }

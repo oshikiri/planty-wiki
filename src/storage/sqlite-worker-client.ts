@@ -1,4 +1,5 @@
 type WorkerRequestType =
+  | "refreshBundledDocs"
   | "loadNotes"
   | "loadNoteSummaries"
   | "loadNote"

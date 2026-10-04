@@ -35,15 +35,7 @@ export async function selectOrCreateNote({
   const normalized = path ? normalizePath(path) : defaultPage;
   const existing = await noteStorage.loadNote(normalized);
   if (existing) {
-    const bundledBody = resolveBundledDocBody?.(normalized);
-    if (bundledBody == null || existing.body === bundledBody) {
-      return { note: existing, routePath: normalized, created: false };
-    }
-    return {
-      note: { ...existing, body: bundledBody },
-      routePath: normalized,
-      created: false,
-    };
+    return { note: existing, routePath: normalized, created: false };
   }
   const now = new Date().toISOString();
   const newNote = sanitizeNoteForSave({

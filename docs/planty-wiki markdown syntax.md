@@ -61,6 +61,14 @@ console.log(message);
 - Choose `Discard local` and confirm to remove the conflicting local note.
 - During Markdown import, `Cancel Import` stops file reading before notes are saved. Once `Saving Import...` appears, saving runs to completion.
 
+## Bundled Documentation Pages
+
+- Bundled documentation pages can be edited like other notes. For example, open `[[README]]` and add a paragraph.
+- Your saved edits remain when the bundled source for that page has not changed.
+- Loading a newly built and deployed app replaces the saved body of each page whose bundled source changed, including your edits. Changes to other bundled pages do not replace your edits to this page.
+- Existing documentation pages without a recorded source hash receive the current bundled body once when this feature is first used.
+- Deleted pages are not restored by the update check. Opening a missing bundled page explicitly, such as `[[README]]`, creates it from the bundled body.
+
 ## Unsupported Syntax
 
 - The image embed syntax (`![alt text](url "title")`) is shown as plain text and does not render.

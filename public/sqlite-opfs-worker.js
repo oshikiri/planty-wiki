@@ -51,6 +51,11 @@ self.onmessage = async function (event) {
       return;
     }
 
+    if (type === "refreshBundledDocs") {
+      handleRefreshBundledDocs(db, id, payload);
+      return;
+    }
+
     if (type === "deleteNote") {
       handleDeleteNote(db, id, payload);
       return;
@@ -129,6 +134,7 @@ function createOrGetDbPromise() {
         });
         initializeSyncStructures(db);
         initializeLinkStructures(db);
+        initializeBundledDocStructures(db);
         return db;
       } catch (error) {
         console.error("Failed to initialize SQLite OPFS database in worker", error);
@@ -214,41 +220,9 @@ function handleSaveNote(db, id, payload) {
     return;
   }
   var updatedAt = typeof note.updatedAt === "string" ? note.updatedAt : now;
-  var syncNote = findSyncNoteByPath(db, path);
-  var noteId = syncNote ? syncNote.noteId : createSyncNoteId();
-  var baseVersion = syncNote ? syncNote.version : 0;
   try {
     db.exec({ sql: "BEGIN" });
-    db.exec({
-      sql:
-        "INSERT INTO pages (path, title, body, updated_at) VALUES ($path, $title, $body, $updated_at) " +
-        "ON CONFLICT(path) DO UPDATE SET title = excluded.title, body = excluded.body, updated_at = excluded.updated_at",
-      bind: {
-        $path: path,
-        $title: title,
-        $body: body,
-        $updated_at: updatedAt,
-      },
-    });
-    replaceLinksForSource(db, path, body);
-    upsertSyncNote(db, {
-      path: path,
-      noteId: noteId,
-      version: syncNote ? syncNote.version : 0,
-      changeSequence: syncNote ? syncNote.changeSequence : 0,
-      deleted: false,
-      updatedAt: updatedAt,
-    });
-    enqueueSyncChange(db, {
-      operationId: createSyncNoteId(),
-      noteId: noteId,
-      path: path,
-      title: title,
-      body: body,
-      deleted: false,
-      baseVersion: baseVersion,
-      createdAt: updatedAt,
-    });
+    persistNote(db, { path: path, title: title, body: body, updatedAt: updatedAt });
     db.exec({ sql: "COMMIT" });
     postIfNotCancelled(id, { id: id, ok: true, result: null });
   } catch (error) {
@@ -259,6 +233,109 @@ function handleSaveNote(db, id, payload) {
       error: error && error.message ? String(error.message) : "Failed to save note",
     });
   }
+}
+
+// The caller owns the transaction so bundled revisions and note updates commit together.
+function persistNote(db, note) {
+  var syncNote = findSyncNoteByPath(db, note.path);
+  var noteId = syncNote ? syncNote.noteId : createSyncNoteId();
+  db.exec({
+    sql:
+      "INSERT INTO pages (path, title, body, updated_at) VALUES ($path, $title, $body, $updated_at) " +
+      "ON CONFLICT(path) DO UPDATE SET title = excluded.title, body = excluded.body, updated_at = excluded.updated_at",
+    bind: {
+      $path: note.path,
+      $title: note.title,
+      $body: note.body,
+      $updated_at: note.updatedAt,
+    },
+  });
+  replaceLinksForSource(db, note.path, note.body);
+  upsertSyncNote(db, {
+    path: note.path,
+    noteId: noteId,
+    version: syncNote ? syncNote.version : 0,
+    changeSequence: syncNote ? syncNote.changeSequence : 0,
+    deleted: false,
+    updatedAt: note.updatedAt,
+  });
+  enqueueSyncChange(db, {
+    operationId: createSyncNoteId(),
+    noteId: noteId,
+    path: note.path,
+    title: note.title,
+    body: note.body,
+    deleted: false,
+    baseVersion: syncNote ? syncNote.version : 0,
+    createdAt: note.updatedAt,
+  });
+}
+
+function initializeBundledDocStructures(db) {
+  db.exec({
+    sql: "CREATE TABLE IF NOT EXISTS bundled_doc_revisions (path TEXT PRIMARY KEY, hash TEXT NOT NULL)",
+  });
+}
+
+function handleRefreshBundledDocs(db, id, docs) {
+  try {
+    if (!Array.isArray(docs)) throw new Error("Invalid bundled docs payload");
+    db.exec({ sql: "BEGIN" });
+    for (var doc of docs) {
+      refreshBundledDoc(db, doc);
+    }
+    db.exec({ sql: "COMMIT" });
+    postIfNotCancelled(id, { id: id, ok: true, result: null });
+  } catch (error) {
+    rollbackTransaction(db);
+    postIfNotCancelled(id, {
+      id: id,
+      ok: false,
+      error: error && error.message ? String(error.message) : "Failed to refresh bundled docs",
+    });
+  }
+}
+
+function refreshBundledDoc(db, doc) {
+  doc = validateBundledDoc(doc);
+  if (readBundledDocHash(db, doc.path) === doc.hash) return;
+  var note = findPageByPath(db, doc.path);
+  if (note && note.body !== doc.body) {
+    persistNote(db, { ...note, body: doc.body, updatedAt: new Date().toISOString() });
+  }
+  // Track unseen pages too, so an edit after their first creation survives the next launch.
+  writeBundledDocHash(db, doc);
+}
+
+function validateBundledDoc(doc) {
+  var path = normalizeAndValidatePath(doc && doc.path);
+  var body = extractAndValidateText(doc && doc.body, SYNC_INPUT_LIMITS.body, { allowEmpty: true });
+  if (!path || body == null || typeof doc.hash !== "string" || !/^[a-f0-9]{64}$/.test(doc.hash)) {
+    throw new Error("Invalid bundled doc payload");
+  }
+  return { path: path, body: body, hash: doc.hash };
+}
+
+function readBundledDocHash(db, path) {
+  var previousHash = null;
+  db.exec({
+    sql: "SELECT hash FROM bundled_doc_revisions WHERE path = $path",
+    bind: { $path: path },
+    rowMode: "object",
+    callback: function (row) {
+      previousHash = row.hash;
+    },
+  });
+  return previousHash;
+}
+
+function writeBundledDocHash(db, doc) {
+  db.exec({
+    sql:
+      "INSERT INTO bundled_doc_revisions (path, hash) VALUES ($path, $hash) " +
+      "ON CONFLICT(path) DO UPDATE SET hash = excluded.hash",
+    bind: { $path: doc.path, $hash: doc.hash },
+  });
 }
 
 function extractAndValidateText(value, maxLength, options) {

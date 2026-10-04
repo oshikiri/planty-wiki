@@ -5,11 +5,13 @@ import type {
   SyncConflictResolution,
 } from "../types/sync";
 import type { Note, NoteSummary } from "./note";
+import type { BundledDoc } from "./bundled-doc";
 
 /**
  * NoteRepository defines the abstraction layer for note storage.
  */
 export interface NoteRepository {
+  refreshBundledDocs(docs: BundledDoc[]): Promise<void>;
   loadSummaries(): Promise<NoteSummary[]>;
   loadByPath(path: Note["path"]): Promise<Note | null>;
   loadAll(): Promise<Note[]>;

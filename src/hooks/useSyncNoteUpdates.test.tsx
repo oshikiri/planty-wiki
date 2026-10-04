@@ -14,10 +14,10 @@ afterEach(() => {
   for (const container of containers.splice(0)) render(null, container);
 });
 
-async function mountUpdates() {
+async function mountUpdates(path = "/pages/test") {
   const container = document.createElement("div");
   containers.push(container);
-  const original: Note = { path: "/pages/test", title: "Test", body: "Local" };
+  const original: Note = { path, title: "Test", body: "Local" };
   let listener!: (event: NoteChangeEvent) => void | Promise<void>;
   let setPending!: (value: boolean) => void;
   const loadNote = vi.fn().mockResolvedValue({ ...original, body: "Server" });
@@ -103,4 +103,12 @@ it("defers received updates while unsaved editor changes are present", async () 
     await Promise.resolve();
   });
   expect(f.container.textContent).toBe("/pages/test|Server|Server|1");
+});
+
+it("shows synchronized edits to a bundled page instead of its bundled body", async () => {
+  const f = await mountUpdates("/pages/README");
+  await act(async () => {
+    await f.emit({ type: "resolution", previousPath: "/pages/README", path: "/pages/README" });
+  });
+  expect(f.container.textContent).toBe("/pages/README|Server|Server|1");
 });

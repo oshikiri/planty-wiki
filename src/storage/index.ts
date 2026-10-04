@@ -1,4 +1,5 @@
 import type { Note, NoteSummary } from "../types/note";
+import type { BundledDoc } from "../domain/bundled-doc";
 import type {
   CloudSyncResult,
   PendingSyncChange,
@@ -8,6 +9,7 @@ import type {
 import { createSqliteStorage } from "./opfs-sqlite";
 
 export interface NoteStorage {
+  refreshBundledDocs: (docs: BundledDoc[]) => Promise<void>;
   loadNoteSummaries: () => Promise<NoteSummary[]>;
   loadNote: (path: Note["path"]) => Promise<Note | null>;
   loadNotes: () => Promise<Note[]>;

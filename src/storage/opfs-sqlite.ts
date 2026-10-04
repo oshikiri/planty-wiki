@@ -16,6 +16,9 @@ import { callWorker } from "./sqlite-worker-client";
 // biome-ignore lint/complexity/noExcessiveLinesPerFunction: This factory intentionally groups SQLite storage operations.
 export function createSqliteStorage(): NoteStorage {
   return {
+    async refreshBundledDocs(docs): Promise<void> {
+      await callWorker<void>("refreshBundledDocs", docs);
+    },
     async loadNoteSummaries(): Promise<NoteSummary[]> {
       try {
         const result =

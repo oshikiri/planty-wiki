@@ -118,7 +118,7 @@ export function useAppController({
           return;
         }
         if (note) {
-          setCurrentNote(applyBundledDocBody(note));
+          setCurrentNote(note);
           incrementNoteRevision();
           return;
         }
@@ -127,7 +127,7 @@ export function useAppController({
           title: deriveTitle(route.path),
           body: resolveBundledDocBody(route.path) ?? "",
         });
-        setCurrentNote(applyBundledDocBody(fallback));
+        setCurrentNote(fallback);
         incrementNoteRevision();
       })
       .catch((error) => {
@@ -302,14 +302,6 @@ export function useAppController({
   const handleCancelDelete = useCallback(() => {
     setPendingDeletionPath(null);
   }, []);
-
-  function applyBundledDocBody(note: Note): Note {
-    const bundledBody = resolveBundledDocBody(note.path);
-    if (bundledBody === null || note.body === bundledBody) {
-      return note;
-    }
-    return { ...note, body: bundledBody };
-  }
 
   return {
     noteRevision,

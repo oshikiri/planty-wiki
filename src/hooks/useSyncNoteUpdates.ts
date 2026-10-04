@@ -76,8 +76,8 @@ export function useSyncNoteUpdates(params: SyncNoteUpdatesParams) {
 }
 
 function applySyncedNote(params: SyncNoteUpdatesParams, path: string, note: Note | null) {
-  const body = resolveBundledDocBody(path) ?? note?.body ?? "";
-  const updated = note ? { ...note, body } : { path, title: deriveTitleFromPath(path), body };
+  const body = note?.body ?? resolveBundledDocBody(path) ?? "";
+  const updated = note ?? { path, title: deriveTitleFromPath(path), body };
   if (
     params.currentNote?.path === path &&
     params.currentNote.body === body &&

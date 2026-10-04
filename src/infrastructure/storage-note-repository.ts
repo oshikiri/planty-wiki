@@ -1,4 +1,5 @@
 import type { NoteRepository } from "../domain/note-repository";
+import type { BundledDoc } from "../domain/bundled-doc";
 import type {
   CloudSyncResult,
   PendingSyncChange,
@@ -13,6 +14,10 @@ import { createStorage, type NoteStorage } from "../storage";
  */
 class StorageNoteRepository implements NoteRepository {
   constructor(private readonly storage: NoteStorage) {}
+
+  refreshBundledDocs(docs: BundledDoc[]): Promise<void> {
+    return this.storage.refreshBundledDocs(docs);
+  }
 
   loadSummaries(): Promise<NoteSummary[]> {
     return this.storage.loadNoteSummaries();

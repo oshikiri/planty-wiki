@@ -1,4 +1,5 @@
 import { normalizePath } from "../domain/path";
+import type { BundledDoc } from "../domain/bundled-doc";
 
 type DefaultDocSource = {
   sourcePath: string;
@@ -29,6 +30,19 @@ const BUNDLED_DOC_BODIES_BY_PATH = buildBundledDocBodiesByPath(DEFAULT_DOC_SOURC
  */
 export function resolveBundledDocBody(path: string): string | null {
   return BUNDLED_DOC_BODIES_BY_PATH.get(normalizePath(path)) ?? null;
+}
+
+/** Computes the bundled revision of each page independently of user edits. */
+export async function loadBundledDocs(): Promise<BundledDoc[]> {
+  return Promise.all(
+    [...BUNDLED_DOC_BODIES_BY_PATH].map(async ([path, body]) => {
+      const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(body));
+      const hash = [...new Uint8Array(digest)]
+        .map((byte) => byte.toString(16).padStart(2, "0"))
+        .join("");
+      return { path, body, hash };
+    }),
+  );
 }
 
 function buildBundledDocBodiesByPath(sources: DefaultDocSource[]): Map<string, string> {
