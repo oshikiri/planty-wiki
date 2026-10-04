@@ -180,81 +180,31 @@ type SidebarListProps = {
 };
 
 function SidebarList({ notes, selectedPath, onSelectPath, onContextMenu }: SidebarListProps) {
-  const partitions = partitionNotes(notes);
+  const sortedNotes = [...notes].sort((a, b) => {
+    const aTime = new Date(a.updatedAt ?? 0).getTime();
+    const bTime = new Date(b.updatedAt ?? 0).getTime();
+    return bTime - aTime;
+  });
   return (
-    <div class={styles.sidebarLists}>
-      <SidebarListSection
-        title="Recently Updated"
-        notes={partitions.recent}
-        selectedPath={selectedPath}
-        onSelectPath={onSelectPath}
-        onContextMenu={onContextMenu}
-        keyPrefix="recent"
-      />
-      <SidebarListSection
-        title="All Notes"
-        notes={partitions.remaining}
-        selectedPath={selectedPath}
-        onSelectPath={onSelectPath}
-        onContextMenu={onContextMenu}
-        keyPrefix="all"
-      />
-    </div>
+    <ul class={styles.sidebarList}>
+      {sortedNotes.map((note) => (
+        <li key={note.path}>
+          <button
+            type="button"
+            class={
+              note.path === selectedPath
+                ? `${styles.sidebarItem} ${styles.sidebarItemActive}`
+                : styles.sidebarItem
+            }
+            onClick={() => onSelectPath(note.path)}
+            onContextMenu={(event) => onContextMenu(event as MouseEvent, note.path)}
+          >
+            <span>{note.title || note.path}</span>
+          </button>
+        </li>
+      ))}
+    </ul>
   );
-}
-
-function SidebarListSection({
-  title,
-  notes,
-  selectedPath,
-  onSelectPath,
-  onContextMenu,
-  keyPrefix,
-}: {
-  title: string;
-  notes: NoteSummary[];
-  selectedPath: string | null;
-  onSelectPath: (path: string) => void;
-  onContextMenu: (event: MouseEvent, path: string) => void;
-  keyPrefix: string;
-}) {
-  return (
-    <section>
-      <h3 class={styles.sidebarSectionTitle}>{title}</h3>
-      <ul class={styles.sidebarList}>
-        {notes.map((note) => (
-          <li key={`${note.path}::${keyPrefix}`}>
-            <button
-              type="button"
-              class={
-                note.path === selectedPath
-                  ? `${styles.sidebarItem} ${styles.sidebarItemActive}`
-                  : styles.sidebarItem
-              }
-              onClick={() => onSelectPath(note.path)}
-              onContextMenu={(event) => onContextMenu(event as MouseEvent, note.path)}
-            >
-              <span>{note.title || note.path}</span>
-            </button>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
-function partitionNotes(notes: NoteSummary[]) {
-  const sorted = [...notes].sort((a, b) => a.title.localeCompare(b.title));
-  const recent = [...notes]
-    .sort((a, b) => {
-      const aTime = new Date(a.updatedAt ?? 0).getTime();
-      const bTime = new Date(b.updatedAt ?? 0).getTime();
-      return bTime - aTime;
-    })
-    .slice(0, 5);
-  const recentPaths = new Set(recent.map((note) => note.path));
-  const remaining = sorted.filter((note) => !recentPaths.has(note.path));
-  return { recent, remaining };
 }
 
 function SidebarContextMenu({

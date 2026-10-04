@@ -52,6 +52,11 @@ console.log(message);
 - Notes that link to the current page (backlinks) are grouped in the Backlinks list at the bottom of the editor.
 
 
+## Note Navigation
+
+- The sidebar shows all notes, with the most recently updated note first.
+- For example, saving an edit to `[[Project]]` moves that note to the top of the list.
+
 ## Cloud Sync Conflicts
 
 - Choose `Keep local` to keep the latest saved local version, or `Use server` to replace it with the server version.
