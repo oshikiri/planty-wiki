@@ -56,6 +56,8 @@ export type CloudSyncResult =
       conflict: SyncConflict;
     };
 
+export type SyncActivityStatus = "syncing" | "synced" | "retrying";
+
 export type SyncConflictResolution = { previousPath: string; path: string | null };
 
 export type NoteChangeEvent = { type: "sync" } | ({ type: "resolution" } & SyncConflictResolution);

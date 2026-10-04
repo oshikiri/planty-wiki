@@ -57,6 +57,7 @@ export function Sidebar(props: SidebarProps) {
   return (
     <nav class={styles.sidebar} ref={contextMenu.containerRef}>
       <SidebarHeader
+        noteService={props.noteService}
         onImport={props.onImportMarkdown}
         onCancelImport={props.onCancelImport}
         isImporting={props.isImporting}
@@ -95,6 +96,7 @@ export function Sidebar(props: SidebarProps) {
 }
 
 function SidebarHeader({
+  noteService,
   onImport,
   onCancelImport,
   isImporting,
@@ -102,6 +104,7 @@ function SidebarHeader({
   onExport,
   onOpenQuery,
 }: {
+  noteService: NoteService;
   onImport: () => void;
   onCancelImport: () => void;
   isImporting: boolean;
@@ -128,7 +131,7 @@ function SidebarHeader({
           Export
         </button>
       </div>
-      <CloudSyncAccess />
+      <CloudSyncAccess noteService={noteService} />
     </header>
   );
 }

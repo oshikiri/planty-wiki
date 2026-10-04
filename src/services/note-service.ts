@@ -8,6 +8,7 @@ import type { Note, NoteSummary } from "../types/note";
 import type {
   CloudSyncResult,
   PendingSyncChange,
+  SyncActivityStatus,
   SyncConflict,
   NoteChangeEvent,
 } from "../types/sync";
@@ -24,6 +25,8 @@ export type NoteService = {
   loadSyncConflicts: () => Promise<SyncConflict[]>;
   resolveSyncConflict: (noteId: string, choice: "local" | "server", path?: string) => Promise<void>;
   syncPendingChanges: () => Promise<CloudSyncResult>;
+  getSyncActivityStatus: () => SyncActivityStatus;
+  subscribeToSyncActivity: (listener: (status: SyncActivityStatus) => void) => () => void;
   startSyncLifecycle: () => () => void;
   subscribeToChanges: (listener: (event: NoteChangeEvent) => void | Promise<void>) => () => void;
   importFromDirectory: (
@@ -65,6 +68,8 @@ export function createNoteService(repository: NoteRepository): NoteService {
     loadPendingSyncChanges: () => repository.loadPendingSyncChanges(),
     loadSyncConflicts: () => repository.loadSyncConflicts(),
     syncPendingChanges: sync.run,
+    getSyncActivityStatus: sync.getStatus,
+    subscribeToSyncActivity: sync.subscribe,
     startSyncLifecycle: sync.start,
     subscribeToChanges(listener) {
       listeners.add(listener);

@@ -1,5 +1,5 @@
 import { checkCloudSyncAccess } from "./cloud-sync-access";
-import type { CloudSyncResult } from "../types/sync";
+import type { CloudSyncResult, SyncActivityStatus } from "../types/sync";
 
 const AUTHENTICATION_REQUIRED: CloudSyncResult = {
   status: "unauthenticated",
@@ -19,7 +19,12 @@ export function createSyncController(
   notify: (result: CloudSyncResult) => void,
 ) {
   const controller = new SyncController(synchronize, notify);
-  return { run: () => controller.run(), start: () => controller.start() };
+  return {
+    run: () => controller.run(),
+    start: () => controller.start(),
+    getStatus: () => controller.getStatus(),
+    subscribe: (listener: (status: SyncActivityStatus) => void) => controller.subscribe(listener),
+  };
 }
 
 class SyncController {
@@ -29,19 +34,35 @@ class SyncController {
   private retryTimer: number | null = null;
   private retryDelay = 1_000;
   private active = false;
+  private status: SyncActivityStatus = "syncing";
+  private readonly listeners = new Set<(status: SyncActivityStatus) => void>();
 
   constructor(
     private readonly synchronize: () => Promise<CloudSyncResult>,
     private readonly notify: (result: CloudSyncResult) => void,
   ) {}
 
+  getStatus() {
+    return this.status;
+  }
+
+  subscribe(listener: (status: SyncActivityStatus) => void) {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+
   run(): Promise<CloudSyncResult> {
     if (this.inFlight) return this.inFlight;
-    if (this.authenticationBlocked) return Promise.resolve(AUTHENTICATION_REQUIRED);
+    if (this.authenticationBlocked) {
+      this.setStatus("retrying");
+      return Promise.resolve(AUTHENTICATION_REQUIRED);
+    }
+    this.setStatus("syncing");
     this.inFlight = this.synchronize()
       .then((result) => this.handleResult(result))
       .catch((error) => {
         this.scheduleRetry();
+        this.setStatus("retrying");
         throw error;
       })
       .finally(() => {
@@ -86,11 +107,14 @@ class SyncController {
     if (result.status === "unauthenticated") {
       this.authenticationBlocked = true;
       this.clearRetry();
+      this.setStatus("retrying");
     } else if (result.status === "unavailable" || result.status === "deferred") {
       this.scheduleRetry();
+      this.setStatus("retrying");
     } else {
       this.clearRetry();
       this.retryDelay = 1_000;
+      this.setStatus("synced");
     }
     this.notify(result);
     return result;
@@ -126,4 +150,10 @@ class SyncController {
     if (this.authenticationBlocked) void this.resume();
     else if (this.retryTimer === null) this.background();
   };
+
+  private setStatus(status: SyncActivityStatus) {
+    if (this.status === status) return;
+    this.status = status;
+    for (const listener of this.listeners) listener(status);
+  }
 }

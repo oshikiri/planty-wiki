@@ -64,6 +64,30 @@ it("coalesces concurrent synchronization triggers", async () => {
   await expect(second).resolves.toEqual(idle);
 });
 
+it("publishes syncing, retrying, and synced activity states", async () => {
+  let complete!: (result: CloudSyncResult) => void;
+  const synchronize = vi.fn(
+    () =>
+      new Promise<CloudSyncResult>((resolve) => {
+        complete = resolve;
+      }),
+  );
+  const controller = createSyncController(synchronize, vi.fn());
+  const statuses: string[] = [];
+  controller.subscribe((status) => statuses.push(status));
+
+  const firstSync = controller.run();
+  expect(controller.getStatus()).toBe("syncing");
+  complete({ ...idle, status: "unavailable" });
+  await firstSync;
+  expect(controller.getStatus()).toBe("retrying");
+
+  synchronize.mockResolvedValue({ ...idle, status: "synced" });
+  await controller.run();
+  expect(controller.getStatus()).toBe("synced");
+  expect(statuses).toEqual(["retrying", "syncing", "synced"]);
+});
+
 it("retries with exponential backoff without periodic sync bypassing the delay", async () => {
   const synchronize = vi
     .fn<() => Promise<CloudSyncResult>>()

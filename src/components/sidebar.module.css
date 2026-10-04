@@ -69,6 +69,11 @@
   white-space: nowrap;
 }
 
+.syncActivity {
+  color: var(--text-subtle);
+  white-space: nowrap;
+}
+
 .sidebarLists {
   display: flex;
   flex-direction: column;
