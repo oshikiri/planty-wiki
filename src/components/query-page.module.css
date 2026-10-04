@@ -17,7 +17,7 @@
 
 .queryTitle {
   margin: 0;
-  font-size: 18px;
+  font-size: var(--font-size-title);
 }
 
 .queryDescription {

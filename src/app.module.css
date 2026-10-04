@@ -4,6 +4,8 @@
   --space-md: 16px;
   --space-lg: 24px;
   --space-xl: 32px;
+  --font-size-body: 16px;
+  --font-size-title: 18px;
 }
 
 :global(:root) {
@@ -31,6 +33,7 @@
 
 :global(body) {
   margin: 0;
+  font-size: var(--font-size-body);
 }
 
 .app {
@@ -70,6 +73,11 @@
 }
 
 @media (max-width: 480px) {
+  :global(:root) {
+    --font-size-body: 14px;
+    --font-size-title: 16px;
+  }
+
   .app {
     padding: 0;
   }

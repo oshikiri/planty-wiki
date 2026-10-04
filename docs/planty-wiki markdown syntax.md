@@ -8,6 +8,7 @@
 ## Paragraphs and Line Breaks
 
 - Add a blank line to separate paragraphs.
+- On screens up to 480px wide, editor text uses a 14px font instead of 16px. For example, `A short note.` appears smaller on a phone.
 
 ## Lists and Checkboxes
 
