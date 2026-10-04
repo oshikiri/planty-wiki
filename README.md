@@ -1,25 +1,21 @@
 # planty-wiki
 
-planty-wiki is a lightweight note-taking app that runs entirely in the browser.
-planty-wiki keeps every editing flow inside the browser, so you can write and browse without a native app or a server.
+planty-wiki is a lightweight, local-first note-taking app that runs in the browser.
+Notes are saved locally and can sync across authorized devices through ChatGPT Sites.
 
 demo page: <https://oshikiri.github.io/planty-wiki/#/pages/README>
 
 - Built with TypeScript, Preact, Lexical, and SQLite on OPFS
 - Browse and edit notes in the browser
-- Persists notes in an OPFS-backed SQLite and exports Markdown on demand
+- Persists notes in an OPFS-backed SQLite database
+- Syncs notes across authorized devices when signed in to ChatGPT Sites
+- Imports and exports Markdown folders
+- Works offline after the app has loaded; Cloud Sync requires a network connection
 - Supports Markdown syntax and wiki links such as `[[Page Name]]`, plus backlinks
 
 ## Known issues
-- Requires Chrome with crossOriginIsolated enabled
-- Lacks multi-tab support
-  - This can cause data loss
-  - Reference: [How we sped up Notion in the browser with WASM SQLite](https://www.notion.com/blog/how-we-sped-up-notion-in-the-browser-with-wasm-sqlite)
-- Lacks proper error handling for OPFS persistence failures
-- Lacks automatic DB schema migrations, so schema changes may lose data.
-- Saves data locally per browser profile and do not sync to servers or clouds, so multi-device sync is unsupported.
-  - Google Drive API integration?
-- Loses notes when browser storage is cleared or a profile is deleted.
+- Multiple tabs are not supported
+- Local notes remain tied to the browser profile. Clearing browser storage or deleting the profile removes them; use Cloud Sync or export Markdown folders to keep another copy.
 - Image embeds are not supported
 
 ## Launch Locally
