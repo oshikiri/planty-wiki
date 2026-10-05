@@ -3,8 +3,6 @@
 planty-wiki is a lightweight, local-first note-taking app that runs in the browser.
 Notes are saved locally and can sync across authorized devices through ChatGPT Sites.
 
-demo page: <https://oshikiri.github.io/planty-wiki/#/pages/README>
-
 - Built with TypeScript, Preact, Lexical, and SQLite on OPFS
 - Browse and edit notes in the browser
 - Persists notes in an OPFS-backed SQLite database
